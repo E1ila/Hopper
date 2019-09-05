@@ -251,7 +251,7 @@ function Hopper_Main(msg)
 	elseif  "E" == cmd or "ENABLE" == cmd then
 		ENABLED = true 
 		Hopper_PrintStatus()
-	elseif  "LEAVEDELAY" == cmd then
+	elseif  "LD" == cmd or "LEAVEDELAY" == cmd then
 		AUTO_LEAVE_DELAY = tonumber(arg1)
 		print("Set leave delay to "..AUTO_LEAVE_DELAY)
 	elseif  "P" == cmd or "PARTYADD" == cmd then
@@ -283,5 +283,6 @@ function Hopper_Main(msg)
         print(" |cFFFFFF00/hop d|r - disable auto invite")
         print(" |cFFFFFF00/hop p|r - enable/disable adding auto inviting members to existing party ("..tostring(PARTYADD)..")")
         print(" |cFFFFFF00/hop l|r - enable/disable auto leave current party for /hop ("..tostring(AUTOLEAVE)..")")
+        print(" |cFFFFFF00/hop ld|r - set leave delay, don't make it too short to allow layer switching ("..tostring(AUTO_LEAVE_DELAY)..")")
 	end
 end 
