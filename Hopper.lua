@@ -53,6 +53,10 @@ local function getRealmName(playerName)
 	return playerName.."-"..gRealmName:gsub("%s+", "")
 end 
 
+local function removeRealmName(playerRealmName) 
+	return string.gsub(playerRealmName, "-"..gRealmName:gsub("%s+", ""), "") 
+end 
+
 ------------------------------------------------
 
 function Hopper_OnLoad(self)
@@ -116,8 +120,8 @@ function Hopper_OnEvent(self, event, arg1, arg2, arg3, arg4, arg5)
 					debug("Invited before "..tostring(time() - lastInvite).." seconds")
 				end 
 				if not lastInvite or time() - lastInvite > HOP_INVITE_COOLDOWN then   
-					debug("Inviting "..sender.." to my layer")
-					gHopInvitationSent = sender 
+					gHopInvitationSent = removeRealmName(sender)
+					debug("Inviting "..gHopInvitationSent.." to my layer")
 					gHopInvitationTime = time()
 					InviteUnit(sender)
 				end 
@@ -150,11 +154,15 @@ function Hopper_OnEvent(self, event, arg1, arg2, arg3, arg4, arg5)
 	end 
 
 	if event == "GROUP_JOINED" then 
-		if gHopInvitationTime > 0 and time() - gHopInvitationTime < HOP_ACCEPT_TIMEOUT and UnitInParty(gHopInvitationSent) then 
-			debug("Group joined, logging "..gHopInvitationSent.." invite time")
-			INVITED[gHopInvitationSent] = gHopInvitationTime
-			gHopInvitationTime = 0
-			gHopInvitationSent = nil 
+		if gHopInvitationTime > 0 and time() - gHopInvitationTime < HOP_ACCEPT_TIMEOUT then 
+			-- when this event triggered, party hasn't changed yet
+			-- debug("Checking if "..gHopInvitationSent.." is in party: "..tostring(UnitInParty(gHopInvitationSent)))
+			-- if UnitInParty(gHopInvitationSent) then 
+				debug("Group joined, logging "..gHopInvitationSent.." invite time")
+				INVITED[gHopInvitationSent] = gHopInvitationTime
+				gHopInvitationTime = 0
+				gHopInvitationSent = nil 
+			-- end 
 		end 
 	end 
 
