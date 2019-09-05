@@ -101,7 +101,7 @@ function Hopper_OnEvent(self, event, arg1, arg2, arg3, arg4, arg5)
 		local sender = getRealmName(arg1)
 		debug("Party requested from "..sender..", partySize = "..partySize..", gHopRequestTime = "..gHopRequestTime)
 		if partySize == 0 and gHopRequested and time() - gHopRequestTime <= HOP_REQUEST_TIMEOUT then 
-			print("Hopped!")
+			print("Hopped into "..sender.."'s world!")
 			AcceptGroup()
 			gHopRequested = false 
 			gShouldAutoLeave = time()
