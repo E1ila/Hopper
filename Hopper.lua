@@ -60,7 +60,7 @@ function Hopper_OnLoad(self)
 	SLASH_Hopper1 = "/hop"
     SlashCmdList["Hopper"] = Hopper_Main
 
-	print("Version "..VERSION.." loaded, write |cFFFFFF00/hop|r to change layer, |cFFFFFF00/hop h|r for help.")
+	print("|cFFFF8080"..VERSION.."|r loaded, write |cFFFFFF00/hop|r to change layer, |cFFFFFF00/hop h|r for help.")
 	Hopper_PrintStatus()
 
 	self:SetScript("OnEvent", Hopper_OnEvent)
@@ -209,7 +209,7 @@ function Hopper_Main(msg)
         print(" |cFFFFFF00/hop|r - change layer")
         print(" |cFFFFFF00/hop e|r - enable auto invite of guild members")
         print(" |cFFFFFF00/hop d|r - disable auto invite")
-        print(" |cFFFFFF00/hop p|r - enable/disable adding auto inviting members to existing party ("..PARTYADD..")")
-        print(" |cFFFFFF00/hop l|r - enable/disable auto leave current party for /hop ("..AUTOLEAVE..")")
+        print(" |cFFFFFF00/hop p|r - enable/disable adding auto inviting members to existing party ("..tostring(PARTYADD)..")")
+        print(" |cFFFFFF00/hop l|r - enable/disable auto leave current party for /hop ("..tostring(AUTOLEAVE)..")")
 	end
 end 
