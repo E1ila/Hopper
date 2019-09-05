@@ -5,7 +5,7 @@ AUTOLEAVE = false
 INVITED = {}
 AUTO_LEAVE_DELAY = 1
 
-local VERSION = "1.0.5"
+local VERSION = "1.0.6"
 local MSG_INVITE = "inv"
 local MSG_COUNT = "count"
 local MSG_COUNT_ENABLED = "count-en"
@@ -211,7 +211,7 @@ function Hopper_HandleAddonMessage(text, channel, sender, target)
 		end 
 	end 
 	if message == MSG_INVITE and ENABLED then 
-		debug("Hop requested "..message.." from "..sender.." my name "..gPlayerName.." / "..gRealmPlayerName)
+		debug("Hop requested "..message.." from "..sender.." to "..target)
 		local isLeader = partySize > 0 and UnitIsGroupLeader(gPlayerName)
 		if (sender ~= gPlayerName and sender ~= gRealmPlayerName) and (partySize == 0 or isLeader and PARTYADD) then
 			local lastInvite = INVITED[removeRealmName(sender)]
@@ -237,7 +237,7 @@ function Hopper_PrintStatus()
 end 
 
 function Hopper_RequestHop()
-	if not IsInGuild() then 
+	if not IsInGuild() and not gToPlayer then 
 		printerr("You are not in a guild, this addon only works between guild members.")
 		return 
 	end 
