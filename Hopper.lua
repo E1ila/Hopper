@@ -1,8 +1,17 @@
 
+local ADDON_PREFIX = "ZE2okI8Vx5H72L"
 
 local function print(text)
     DEFAULT_CHAT_FRAME:AddMessage(text)
 end
+
+local function p(text)
+	print("|cFFFF8080Hopper |r".. text)
+end 
+
+local function pe(text)
+	p("|cFFFF0000".. text .."|r")
+end 
 
 local function emptyIfNil(text) 
 	if text == nil then return "" end 
@@ -19,15 +28,19 @@ function Hopper_OnLoad(self)
 	SLASH_Hopper1 = "/hop"
     SlashCmdList["Hopper"] = Hopper_Main
 
-	print("|cFFFF8080 Hopper |rLoaded, write |cFF00FF00/hop help|r for options")
+	p("Loaded, write |cFF00FF00/hop help|r for options")
 
 	self:RegisterEvent("CHAT_MSG_ADDON")
+
+	successfulRequest = C_ChatInfo.RegisterAddonMessagePrefix(ADDON_PREFIX)
+	if not successfulRequest then 
+		pe("Failed registering to message prefix!")
+	end 
 end 
 
 function Hopper_OnEvent(event, arg1, arg2, arg3, arg4)
-	-- print("|cFFFF8080 Hopper |r  Hopper_OnEvent  "..event)
 	if (event == "CHAT_MSG_ADDON") then
-		print("|cFFFF8080 Hopper |r Incoming Message: ["..emptyIfNil(arg1).."] ["..emptyIfNil(arg2).."] ["..emptyIfNil(arg3).."] ["..emptyIfNil(arg4).."]")
+		p("Incoming Message: ["..emptyIfNil(arg1).."] ["..emptyIfNil(arg2).."] ["..emptyIfNil(arg3).."] ["..emptyIfNil(arg4).."]")
 	end
 end
 
@@ -38,12 +51,12 @@ function Hopper_Main(msg)
 	local _, _, cmd, arg1 = string.find(string.upper(msg), "([%w]+)%s*(.*)$");
 	if not cmd then
 	elseif  "S" == cmd or "SEND" == cmd then
-		SendAddonMessage("manual", arg1, "PARTY")
+		C_ChatInfo.SendAddonMessage(ADDON_PREFIX, arg1, "PARTY")
 	elseif  "R" == cmd or "RESET" == cmd then
     elseif  "H" == cmd or "HELP" == cmd then
-        print("|cFFFF8080 Hopper |rCommands: ")
-        print("|cFFFF8080 Hopper |r  |cFF00FF00/ahdump|r - scan AH")
-        print("|cFFFF8080 Hopper |r  |cFF00FF00/ahdump c <CLASS_INDEX>|r - scan only class index")
+        p("Commands: ")
+        p(" |cFF00FF00/ahdump|r - scan AH")
+        p(" |cFF00FF00/ahdump c <CLASS_INDEX>|r - scan only class index")
 	end
 end 
 
