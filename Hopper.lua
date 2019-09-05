@@ -5,7 +5,7 @@ AUTOLEAVE = false
 INVITED = {}
 AUTO_LEAVE_DELAY = 1
 
-local VERSION = "1.0.3"
+local VERSION = "1.0.4"
 local MSG_INVITE = "inv"
 local MSG_COUNT = "count"
 local MSG_COUNT_ENABLED = "count-en"
@@ -28,6 +28,7 @@ local gHopInvitationTime = 0
 local gHopRequestRetry = false
 local gHoppers = nil
 local gHoppersQuery = nil
+local gToPlayer = nil
 DEBUG = false
 
 local function print(text)
@@ -252,7 +253,11 @@ function Hopper_RequestHop()
 		print("Sending hop request...")
 		gHopRequestTime = time()
 		gHopRequested = true 
-		C_ChatInfo.SendAddonMessage(ADDON_PREFIX, MSG_INVITE, SCOPE)
+		if gToPlayer then 
+			C_ChatInfo.SendAddonMessage(ADDON_PREFIX, MSG_INVITE, "WHISPER", gToPlayer)
+		else 
+			C_ChatInfo.SendAddonMessage(ADDON_PREFIX, MSG_INVITE, SCOPE)
+		end 
 	else 
 		printerr("Can't hop while in a party, leave it first.")
 	end 
@@ -268,6 +273,10 @@ end
 function Hopper_Main(msg) 
 	local _, _, cmd, arg1 = string.find(string.upper(msg), "([%w]+)%s*(.*)$");
 	if not cmd then
+		gToPlayer = nil
+		Hopper_RequestHop()
+	elseif  "TO" == cmd then
+		gToPlayer = arg1 
 		Hopper_RequestHop()
 	elseif  "D" == cmd or "DISABLE" == cmd then
 		ENABLED = false
@@ -306,6 +315,7 @@ function Hopper_Main(msg)
     elseif  "H" == cmd or "HELP" == cmd then
         print("Commands: ")
         print(" |cFFFFFF00/hop|r - change layer")
+        print(" |cFFFFFF00/hop to <player name>|r - hop into <player name> layer, if haven't done so recently")
         print(" |cFFFFFF00/hop e|r - enable auto invite of guild members")
         print(" |cFFFFFF00/hop d|r - disable auto invite")
         print(" |cFFFFFF00/hop p|r - enable/disable adding auto inviting members to existing party ("..tostring(PARTYADD)..")")
