@@ -6,9 +6,14 @@ AUTOLEAVE = false
 local MSG_INVITE = "inv"
 local ADDON_PREFIX = "ZE2okI8Vx5H72L"
 local SCOPE = "GUILD"
+local HOP_REQUEST_TIMEOUT = 10
+local HOP_REQUEST_COOLDOWN = 10
+local AUTO_LEAVE_DELAY = 1
 local gPlayerName = nil 
 local gRealmName = nil 
 local gRealmPlayerName = nil 
+local gHopRequested = 0
+local gShouldAutoLeave = 0
 
 local function print(text)
     DEFAULT_CHAT_FRAME:AddMessage(text)
@@ -33,7 +38,7 @@ function Hopper_OnLoad(self)
 	gRealmName = GetRealmName()
 	gFaction = UnitFactionGroup("player")
 	gPlayerName = UnitName("player")
-	gRealmPlayerName = gPlayerName.."-"..gRealmName
+	gRealmPlayerName = gPlayerName.."-"..gRealmName:gsub("%s+", "")
 
 	SLASH_Hopper1 = "/hop"
     SlashCmdList["Hopper"] = Hopper_Main
@@ -42,7 +47,9 @@ function Hopper_OnLoad(self)
 	Hopper_PrintStatus()
 
 	self:SetScript("OnEvent", Hopper_OnEvent)
+	self:SetScript("OnUpdate", Hopper_OnUpdate)
 	self:RegisterEvent("CHAT_MSG_ADDON")
+	self:RegisterEvent("PARTY_INVITE_REQUEST")
 
 	successfulRequest = C_ChatInfo.RegisterAddonMessagePrefix(ADDON_PREFIX)
 	if not successfulRequest then 
@@ -51,17 +58,38 @@ function Hopper_OnLoad(self)
 end 
 
 function Hopper_OnEvent(self, event, prefix, message, distribution, sender)
+	local partySize = GetNumGroupMembers()
+
 	if (ENABLED and event == "CHAT_MSG_ADDON") then
-		p("requested "..message.." from "..sender)
-		local partySize = GetNumGroupMembers()
+		p("requested "..message.." from "..sender.." my name "..gPlayerName.." / "..gRealmPlayerName)
 		local isLeader = partySize > 0 and UnitIsGroupLeader(gPlayerName)
 		if message == MSG_INVITE and (sender ~= gPlayerName and sender ~= gRealmPlayerName) and (partySize == 0 or isLeader and PARTYADD) then
 			InviteUnit(sender)
 		end 
 	end
+
+	if (ENABLED and event == "PARTY_INVITE_REQUEST" and partySize == 0 and time() - gHopRequested <= HOP_REQUEST_TIMEOUT) then 
+		AcceptGroup()
+		gShouldAutoLeave = time()
+		for i=1, STATICPOPUP_NUMDIALOGS do
+			if _G["StaticPopup"..i].which == "PARTY_INVITE" then
+				_G["StaticPopup"..i].inviteAccepted = 1
+				StaticPopup_Hide("PARTY_INVITE");
+				break
+			elseif _G["StaticPopup"..i].which == "PARTY_INVITE_XREALM" then
+				_G["StaticPopup"..i].inviteAccepted = 1
+				StaticPopup_Hide("PARTY_INVITE_XREALM");
+				break
+			end
+		end
+	end 
 end
 
 function Hopper_OnUpdate(self)
+	if time() - gShouldAutoLeave >= AUTO_LEAVE_DELAY then 
+		gShouldAutoLeave = 0
+		LeaveParty()
+	end 
 end 
 
 function Hopper_PrintStatus()
@@ -78,6 +106,7 @@ function Hopper_RequestHop()
 		if partySize > 0 then
 			LeaveParty()
 		end 
+		gHopRequested = time()
 		C_ChatInfo.SendAddonMessage(ADDON_PREFIX, MSG_INVITE, SCOPE)
 	else 
 		pe("Can't hop while in a party, leave it first.")
