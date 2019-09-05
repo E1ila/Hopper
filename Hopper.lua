@@ -83,7 +83,9 @@ function Hopper_OnEvent(self, event, arg1, arg2, arg3, arg4, arg5)
 		local isLeader = partySize > 0 and UnitIsGroupLeader(gPlayerName)
 		if message == MSG_INVITE and (sender ~= gPlayerName and sender ~= gRealmPlayerName) and (partySize == 0 or isLeader and PARTYADD) then
 			local lastInvite = INVITED[sender]
-			debug("lastInvite = "..emptyIfNil(lastInvite))
+			if lastInvite then 
+				debug("Invited before "..tostring(time() - lastInvite).." seconds")
+			end 
 			if not lastInvite or time() - lastInvite > HOP_INVITE_COOLDOWN then   
 				debug("Inviting "..sender.." to my layer")
 				gHopInvitationSent = sender 
@@ -189,6 +191,8 @@ function Hopper_Main(msg)
 		end 
 	elseif  "DEBUG" == cmd then
 		DEBUG = not DEBUG
+	elseif  "RESET" == cmd then
+		INVITED = {}
     elseif  "H" == cmd or "HELP" == cmd then
         print("Commands: ")
         print(" |cFFFFFF00/hop|r - change layer")
