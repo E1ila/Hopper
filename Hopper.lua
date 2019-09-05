@@ -17,6 +17,7 @@ local gRealmPlayerName = nil
 local gHopRequestTime = 0
 local gHopRequested = false
 local gShouldAutoLeave = 0
+local gHopInvitationSent = nil
 DEBUG = false
 
 local function print(text)
@@ -58,6 +59,7 @@ function Hopper_OnLoad(self)
 	self:SetScript("OnUpdate", Hopper_OnUpdate)
 	self:RegisterEvent("CHAT_MSG_ADDON")
 	self:RegisterEvent("PARTY_INVITE_REQUEST")
+	self:RegisterEvent("INSTANCE_GROUP_SIZE_CHANGED")
 
 	successfulRequest = C_ChatInfo.RegisterAddonMessagePrefix(ADDON_PREFIX)
 	if not successfulRequest then 
@@ -76,7 +78,7 @@ function Hopper_OnEvent(self, event, prefix, message, distribution, sender)
 			debug("lastInvite = "..emptyIfNil(lastInvite))
 			if not lastInvite or time() - lastInvite > HOP_INVITE_COOLDOWN then   
 				debug("Inviting "..sender.." to my layer")
-				INVITED[sender] = time()
+				gHopInvitationSent = sender 
 				InviteUnit(sender)
 			end 
 		end 
@@ -84,7 +86,7 @@ function Hopper_OnEvent(self, event, prefix, message, distribution, sender)
 
 	if event == "PARTY_INVITE_REQUEST" then 
 		debug("Party requested "..sender..", partySize = "..partySize..", gHopRequestTime = "..gHopRequestTime)
-		if ENABLED and partySize == 0 and gHopRequested and time() - gHopRequestTime <= HOP_REQUEST_TIMEOUT then 
+		if partySize == 0 and gHopRequested and time() - gHopRequestTime <= HOP_REQUEST_TIMEOUT then 
 			debug("Accepting party invite")
 			AcceptGroup()
 			gHopRequested = false 
@@ -102,6 +104,13 @@ function Hopper_OnEvent(self, event, prefix, message, distribution, sender)
 			end
 		end 
 	end 
+
+	if event == "INSTANCE_GROUP_SIZE_CHANGED" then 
+		debug("INSTANCE_GROUP_SIZE_CHANGED to "..partySize.." - "..sender)
+	end 
+
+	-- INVITED[sender] = time()
+
 end
 
 function Hopper_OnUpdate(self)
@@ -121,7 +130,7 @@ end
 
 function Hopper_RequestHop()
 	local partySize = GetNumGroupMembers()
-	debug("gHopRequestTime = "..gHopRequestTime..", partySize = "..partySize..", AUTOLEAVE = "..AUTOLEAVE)
+	debug("gHopRequestTime = "..gHopRequestTime..", partySize = "..partySize..", AUTOLEAVE = "..tostring(AUTOLEAVE))
 	if time() - gHopRequestTime <= HOP_REQUEST_COOLDOWN then 
 		printerr("TOO SOON, MORTAL INFIDEL. Try again in "..tostring(HOP_REQUEST_COOLDOWN - (time() - gHopRequestTime)).." seconds.")
 		return 
@@ -165,7 +174,7 @@ function Hopper_Main(msg)
 		else 
 			print("Auto Leave Party |cffff1111disabled|r. Will ignore /hop command if in a party.")
 		end 
-	elseif  "D" == cmd or "DEBUG" == cmd then
+	elseif  "DEBUG" == cmd then
 		DEBUG = not DEBUG
     elseif  "H" == cmd or "HELP" == cmd then
         print("Commands: ")
