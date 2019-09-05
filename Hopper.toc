@@ -2,7 +2,7 @@
 ## Author: E1ila
 ## Title: Hopper
 ## Notes: Allows easy hopping between layers
-## SavedVariables: 
+## SavedVariables: AUTO_LEAVE_DELAY
 ## SavedVariablesPerCharacter: ENABLED, PARTYADD, AUTOLEAVE, INVITED, DEBUG
 Hopper.lua
 Hopper.xml

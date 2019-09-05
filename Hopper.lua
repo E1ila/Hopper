@@ -16,7 +16,7 @@ local HOP_REQUEST_TIMEOUT = 10
 local HOP_ACCEPT_TIMEOUT = 60
 local HOP_REQUEST_COOLDOWN = 10
 local HOP_INVITE_COOLDOWN = 1200 -- wait 20 minutes before inviting someone again
-local AUTO_LEAVE_DELAY = 1
+local AUTO_LEAVE_DELAY = 5
 local gPlayerName = nil 
 local gRealmName = nil 
 local gRealmPlayerName = nil 
@@ -132,7 +132,9 @@ function Hopper_OnEvent(self, event, arg1, arg2, arg3, arg4, arg5)
 			print("Hopped into "..sender.."'s world!")
 			AcceptGroup()
 			gHopRequested = false 
-			gShouldAutoLeave = time()
+			if AUTO_LEAVE_DELAY > 0 then 
+				gShouldAutoLeave = time()
+			end 
 			for i=1, STATICPOPUP_NUMDIALOGS do
 				if _G["StaticPopup"..i].which == "PARTY_INVITE" then
 					_G["StaticPopup"..i].inviteAccepted = 1
@@ -241,6 +243,9 @@ function Hopper_Main(msg)
 	elseif  "E" == cmd or "ENABLE" == cmd then
 		ENABLED = true 
 		Hopper_PrintStatus()
+	elseif  "LEAVEDELAY" == cmd then
+		AUTO_LEAVE_DELAY = tonumber(arg1)
+		print("Set leave delay to "..AUTO_LEAVE_DELAY)
 	elseif  "P" == cmd or "PARTYADD" == cmd then
 		PARTYADD = not PARTYADD
 		if PARTYADD then 
