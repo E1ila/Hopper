@@ -30,7 +30,7 @@ end
 
 local function debug(text) 
 	if DEBUG then 
-		print("|cFF999999"..DEBUG.."|r")
+		print("|cFF999999"..text.."|r")
 	end 
 end 
 
