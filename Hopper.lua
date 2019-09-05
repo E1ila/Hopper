@@ -3,9 +3,9 @@ ENABLED = true
 PARTYADD = true
 AUTOLEAVE = false 
 INVITED = {}
-AUTO_LEAVE_DELAY = 5
+AUTO_LEAVE_DELAY = 1
 
-local VERSION = "1.0.1"
+local VERSION = "1.0.3"
 local MSG_INVITE = "inv"
 local MSG_COUNT = "count"
 local MSG_COUNT_ENABLED = "count-en"
@@ -57,6 +57,14 @@ local function removeRealmName(playerRealmName)
 	return string.gsub(playerRealmName, "-"..gRealmName:gsub("%s+", ""), "") 
 end 
 
+local function splitCsv(text, sep) 
+	local result = {}
+	for word in string.gmatch(text, '([^,]+)') do 
+		table.insert(result, word)
+	end 
+	return result 
+end 
+
 ------------------------------------------------
 
 function Hopper_OnLoad(self)
@@ -77,7 +85,7 @@ function Hopper_OnLoad(self)
 	self:SetScript("OnUpdate", Hopper_OnUpdate)
 	self:RegisterEvent("CHAT_MSG_ADDON")
 	self:RegisterEvent("PARTY_INVITE_REQUEST")
-	self:RegisterEvent("GROUP_JOINED")
+	self:RegisterEvent("GROUP_ROSTER_UPDATE")
 
 	successfulRequest = C_ChatInfo.RegisterAddonMessagePrefix(ADDON_PREFIX)
 	if not successfulRequest then 
@@ -86,75 +94,18 @@ function Hopper_OnLoad(self)
 end 
 
 function Hopper_OnEvent(self, event, arg1, arg2, arg3, arg4, arg5)
-	local partySize = GetNumGroupMembers()
-
-	if event == "CHAT_MSG_ADDON" then
-		local sender = arg4
-		local message = arg2
-		if message == MSG_COUNT then 
-			debug("Hop count query from "..sender)
-			if ENABLED then 
-				C_ChatInfo.SendAddonMessage(ADDON_PREFIX, MSG_COUNT_ENABLED, SCOPE)
-			else 
-				C_ChatInfo.SendAddonMessage(ADDON_PREFIX, MSG_COUNT_DISABLED, SCOPE)
-			end 
-		end 
-		if message == MSG_COUNT_ENABLED then 
-			if gHoppers ~= nil then 
-				debug("Count - "..sender.." - ENABLED")
-				gHoppers[sender] = 1
-			end 
-		end 
-		if message == MSG_COUNT_DISABLED then 
-			if gHoppers ~= nil then 
-				debug("Count - "..sender.." - DISABLED")
-				gHoppers[sender] = 0
-			end 
-		end 
-		if message == MSG_INVITE and ENABLED then 
-			debug("Hop requested "..message.." from "..sender.." my name "..gPlayerName.." / "..gRealmPlayerName)
-			local isLeader = partySize > 0 and UnitIsGroupLeader(gPlayerName)
-			if (sender ~= gPlayerName and sender ~= gRealmPlayerName) and (partySize == 0 or isLeader and PARTYADD) then
-				local lastInvite = INVITED[sender]
-				if lastInvite then 
-					debug("Invited before "..tostring(time() - lastInvite).." seconds")
-				end 
-				if not lastInvite or time() - lastInvite > HOP_INVITE_COOLDOWN then   
-					gHopInvitationSent = removeRealmName(sender)
-					debug("Inviting "..gHopInvitationSent.." to my layer")
-					gHopInvitationTime = time()
-					InviteUnit(sender)
-				end 
-			end 
-		end 
+	if event == "CHAT_MSG_ADDON" and arg1 == ADDON_PREFIX then
+		Hopper_HandleAddonMessage(arg2, arg3, arg4, arg5)
 	end
 
 	if event == "PARTY_INVITE_REQUEST" then 
-		local sender = getRealmName(arg1)
-		debug("Party requested from "..sender..", partySize = "..partySize..", gHopRequestTime = "..gHopRequestTime)
-		if partySize == 0 and gHopRequested and time() - gHopRequestTime <= HOP_REQUEST_TIMEOUT then 
-			print("Hopped into "..sender.."'s world!")
-			AcceptGroup()
-			gHopRequested = false 
-			if AUTO_LEAVE_DELAY > 0 then 
-				gShouldAutoLeave = time()
-			end 
-			for i=1, STATICPOPUP_NUMDIALOGS do
-				if _G["StaticPopup"..i].which == "PARTY_INVITE" then
-					_G["StaticPopup"..i].inviteAccepted = 1
-					StaticPopup_Hide("PARTY_INVITE");
-					break
-				elseif _G["StaticPopup"..i].which == "PARTY_INVITE_XREALM" then
-					_G["StaticPopup"..i].inviteAccepted = 1
-					StaticPopup_Hide("PARTY_INVITE_XREALM");
-					break
-				end
-			end
-		end 
+		Hopper_HandleIncomingPartyInvite(getRealmName(arg1))
 	end 
 
-	if event == "GROUP_JOINED" then 
+	if event == "GROUP_ROSTER_UPDATE" then 
+		-- debug("GROUP_ROSTER_UPDATE")
 		if gHopInvitationTime > 0 and time() - gHopInvitationTime < HOP_ACCEPT_TIMEOUT then 
+			debug("gHopInvitationSent in party = "..tostring(UnitInParty(gHopInvitationSent)))
 			-- when this event triggered, party hasn't changed yet
 			-- debug("Checking if "..gHopInvitationSent.." is in party: "..tostring(UnitInParty(gHopInvitationSent)))
 			-- if UnitInParty(gHopInvitationSent) then 
@@ -189,11 +140,87 @@ function Hopper_OnUpdate(self)
 		local enabled = 0
 		local total = 0
 		for k, v in pairs(gHoppers) do 
-			enabled = enabled + v 
+			if v["Enabled"] == "true" then 
+				enabled = enabled + 1
+			end 
 			total = total + 1
 		end 
 		print("Query result: "..total.." hoppers, "..enabled.." enablers")
 		gHoppers = nil 
+	end 
+end 
+
+function Hopper_HandleIncomingPartyInvite(sender) 
+	local partySize = GetNumGroupMembers()
+	debug("Party requested from "..sender..", partySize = "..partySize..", gHopRequestTime = "..gHopRequestTime)
+	if partySize == 0 and gHopRequested and time() - gHopRequestTime <= HOP_REQUEST_TIMEOUT then 
+		print("Hopped into "..sender.."'s world!")
+		AcceptGroup()
+		gHopRequested = false 
+		if AUTO_LEAVE_DELAY > 0 then 
+			gShouldAutoLeave = time()
+		end 
+		for i=1, STATICPOPUP_NUMDIALOGS do
+			if _G["StaticPopup"..i].which == "PARTY_INVITE" then
+				_G["StaticPopup"..i].inviteAccepted = 1
+				StaticPopup_Hide("PARTY_INVITE");
+				break
+			elseif _G["StaticPopup"..i].which == "PARTY_INVITE_XREALM" then
+				_G["StaticPopup"..i].inviteAccepted = 1
+				StaticPopup_Hide("PARTY_INVITE_XREALM");
+				break
+			end
+		end
+	end 
+end 
+
+function Hopper_HandleAddonMessage(text, channel, sender, target)
+	local partySize = GetNumGroupMembers()
+	local parts = splitCsv(text)
+	local message = parts[1]
+	-- debug('CHAT_MSG_ADDON ('..sender..') '..text)
+	if message == MSG_COUNT then 
+		if parts[2] then 
+			-- count response
+			if gHoppers ~= nil then 
+				debug("Count - "..sender..", enabled: "..parts[2]..", version: "..parts[3])
+				gHoppers[sender] = {["Enabled"] = parts[2], ["Version"] = parts[3]}
+			end 	
+		else 
+			-- count query
+			debug("Hop count query from "..sender)
+			C_ChatInfo.SendAddonMessage(ADDON_PREFIX, MSG_COUNT..","..tostring(ENABLED)..","..VERSION, SCOPE)
+		end 
+	end 
+	if message == MSG_COUNT_ENABLED then 
+		-- old count response
+		if gHoppers ~= nil then 
+			debug("Count - "..sender.." - ENABLED")
+			gHoppers[sender] = {["Enabled"] = "true"}
+		end 
+	end 
+	if message == MSG_COUNT_DISABLED then 
+		-- old count response
+		if gHoppers ~= nil then 
+			debug("Count - "..sender.." - DISABLED")
+			gHoppers[sender] = {["Enabled"] = "false"}
+		end 
+	end 
+	if message == MSG_INVITE and ENABLED then 
+		debug("Hop requested "..message.." from "..sender.." my name "..gPlayerName.." / "..gRealmPlayerName)
+		local isLeader = partySize > 0 and UnitIsGroupLeader(gPlayerName)
+		if (sender ~= gPlayerName and sender ~= gRealmPlayerName) and (partySize == 0 or isLeader and PARTYADD) then
+			local lastInvite = INVITED[sender]
+			if lastInvite then 
+				debug("Invited before "..tostring(time() - lastInvite).." seconds")
+			end 
+			if not lastInvite or time() - lastInvite > HOP_INVITE_COOLDOWN then   
+				gHopInvitationSent = removeRealmName(sender)
+				debug("Inviting "..gHopInvitationSent.." to my layer")
+				gHopInvitationTime = time()
+				InviteUnit(sender)
+			end 
+		end 
 	end 
 end 
 
