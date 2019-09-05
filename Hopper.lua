@@ -5,13 +5,15 @@ AUTOLEAVE = false
 INVITED = {}
 AUTO_LEAVE_DELAY = 1
 
-local VERSION = "1.0.6"
+local VERSION = "1.0.7"
+local CHANNEL_WHISPER = "WHISPER"
+local CHANNEL_GUILD = "GUILD"
 local MSG_INVITE = "inv"
 local MSG_COUNT = "count"
 local MSG_COUNT_ENABLED = "count-en"
 local MSG_COUNT_DISABLED = "count-de"
 local ADDON_PREFIX = "ZE2okI8Vx5H72L"
-local SCOPE = "GUILD"
+local SCOPE = CHANNEL_GUILD
 local HOPPER_QUERY_TIMEOUT = 10
 local HOP_REQUEST_TIMEOUT = 10
 local HOP_ACCEPT_TIMEOUT = 60
@@ -211,14 +213,14 @@ function Hopper_HandleAddonMessage(text, channel, sender, target)
 		end 
 	end 
 	if message == MSG_INVITE and ENABLED then 
-		debug("Hop requested "..message.." from "..sender.." to "..target)
+		debug("Hop requested "..message.." from "..sender.." through "..channel)
 		local isLeader = partySize > 0 and UnitIsGroupLeader(gPlayerName)
 		if (sender ~= gPlayerName and sender ~= gRealmPlayerName) and (partySize == 0 or isLeader and PARTYADD) then
 			local lastInvite = INVITED[removeRealmName(sender)]
 			if lastInvite then 
 				debug("Invited before "..tostring(time() - lastInvite).." seconds")
 			end 
-			if not lastInvite or time() - lastInvite > HOP_INVITE_COOLDOWN then   
+			if channel == CHANNEL_WHISPER or not lastInvite or time() - lastInvite > HOP_INVITE_COOLDOWN then   
 				gHopInvitationSent = removeRealmName(sender)
 				debug("Inviting "..gHopInvitationSent.." to my layer")
 				gHopInvitationTime = time()
@@ -257,7 +259,7 @@ function Hopper_RequestHop()
 		gHopRequestTime = time()
 		gHopRequested = true 
 		if gToPlayer then 
-			C_ChatInfo.SendAddonMessage(ADDON_PREFIX, MSG_INVITE, "WHISPER", gToPlayer)
+			C_ChatInfo.SendAddonMessage(ADDON_PREFIX, MSG_INVITE, CHANNEL_WHISPER, gToPlayer)
 		else 
 			C_ChatInfo.SendAddonMessage(ADDON_PREFIX, MSG_INVITE, SCOPE)
 		end 
