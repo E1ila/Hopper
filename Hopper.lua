@@ -12,7 +12,8 @@ local AUTO_LEAVE_DELAY = 1
 local gPlayerName = nil 
 local gRealmName = nil 
 local gRealmPlayerName = nil 
-local gHopRequested = 0
+local gHopRequestTime = 0
+local gHopRequested = false
 local gShouldAutoLeave = 0
 
 local function print(text)
@@ -68,8 +69,9 @@ function Hopper_OnEvent(self, event, prefix, message, distribution, sender)
 		end 
 	end
 
-	if (ENABLED and event == "PARTY_INVITE_REQUEST" and partySize == 0 and time() - gHopRequested <= HOP_REQUEST_TIMEOUT) then 
+	if (ENABLED and event == "PARTY_INVITE_REQUEST" and partySize == 0 and gHopRequested and time() - gHopRequestTime <= HOP_REQUEST_TIMEOUT) then 
 		AcceptGroup()
+		gHopRequested = false 
 		gShouldAutoLeave = time()
 		for i=1, STATICPOPUP_NUMDIALOGS do
 			if _G["StaticPopup"..i].which == "PARTY_INVITE" then
@@ -101,12 +103,17 @@ function Hopper_PrintStatus()
 end 
 
 function Hopper_RequestHop()
+	if time() - gHopRequestTime <= HOP_REQUEST_COOLDOWN then 
+		pe("TOO SOON, MORTAL INFIDEL. Try again in "..tostring(HOP_REQUEST_COOLDOWN - (time() - gHopRequestTime)).." seconds.")
+		return 
+	end 
 	local partySize = GetNumGroupMembers()
 	if partySize == 0 or AUTOLEAVE then 
 		if partySize > 0 then
 			LeaveParty()
 		end 
-		gHopRequested = time()
+		gHopRequestTime = time()
+		gHopRequested = true 
 		C_ChatInfo.SendAddonMessage(ADDON_PREFIX, MSG_INVITE, SCOPE)
 	else 
 		pe("Can't hop while in a party, leave it first.")
