@@ -101,7 +101,7 @@ function Hopper_OnEvent(self, event, arg1, arg2, arg3, arg4, arg5)
 		local sender = getRealmName(arg1)
 		debug("Party requested from "..sender..", partySize = "..partySize..", gHopRequestTime = "..gHopRequestTime)
 		if partySize == 0 and gHopRequested and time() - gHopRequestTime <= HOP_REQUEST_TIMEOUT then 
-			debug("Accepting party invite")
+			print("Hopped!")
 			AcceptGroup()
 			gHopRequested = false 
 			gShouldAutoLeave = time()
@@ -142,6 +142,11 @@ function Hopper_OnUpdate(self)
 			Hopper_RequestHop()
 		end 
 	end 
+	if gHopRequested and time() - gHopRequestTime > HOP_REQUEST_TIMEOUT then 
+		print("No one seems to respond. Make sure your guild members install this addon.")
+		gHopRequested = false 
+		gHopRequestTime = 0
+	end 
 end 
 
 function Hopper_PrintStatus()
@@ -153,6 +158,10 @@ function Hopper_PrintStatus()
 end 
 
 function Hopper_RequestHop()
+	if not IsInGuild() then 
+		printerr("You are not in a guild, this addon only works between guild members.")
+		return 
+	end 
 	local partySize = GetNumGroupMembers()
 	debug("gHopRequestTime = "..gHopRequestTime..", partySize = "..partySize..", AUTOLEAVE = "..tostring(AUTOLEAVE))
 	if time() - gHopRequestTime <= HOP_REQUEST_COOLDOWN then 
@@ -165,6 +174,7 @@ function Hopper_RequestHop()
 			gHopRequestRetry = true 
 			return 
 		end 
+		print("Sending hop request...")
 		gHopRequestTime = time()
 		gHopRequested = true 
 		C_ChatInfo.SendAddonMessage(ADDON_PREFIX, MSG_INVITE, SCOPE)
