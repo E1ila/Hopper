@@ -6,8 +6,12 @@ INVITED = {}
 
 local VERSION = "1.0"
 local MSG_INVITE = "inv"
+local MSG_COUNT = "count"
+local MSG_COUNT_ENABLED = "count-en"
+local MSG_COUNT_DISABLED = "count-de"
 local ADDON_PREFIX = "ZE2okI8Vx5H72L"
 local SCOPE = "GUILD"
+local HOPPER_QUERY_TIMEOUT = 10
 local HOP_REQUEST_TIMEOUT = 10
 local HOP_ACCEPT_TIMEOUT = 60
 local HOP_REQUEST_COOLDOWN = 10
@@ -22,6 +26,8 @@ local gShouldAutoLeave = 0
 local gHopInvitationSent = nil
 local gHopInvitationTime = 0
 local gHopRequestRetry = false
+local gHoppers = nil
+local gHoppersQuery = nil
 DEBUG = false
 
 local function print(text)
@@ -78,21 +84,43 @@ end
 function Hopper_OnEvent(self, event, arg1, arg2, arg3, arg4, arg5)
 	local partySize = GetNumGroupMembers()
 
-	if ENABLED and event == "CHAT_MSG_ADDON" then
+	if event == "CHAT_MSG_ADDON" then
 		local sender = arg4
 		local message = arg2
-		debug("Hop requested "..message.." from "..sender.." my name "..gPlayerName.." / "..gRealmPlayerName)
-		local isLeader = partySize > 0 and UnitIsGroupLeader(gPlayerName)
-		if message == MSG_INVITE and (sender ~= gPlayerName and sender ~= gRealmPlayerName) and (partySize == 0 or isLeader and PARTYADD) then
-			local lastInvite = INVITED[sender]
-			if lastInvite then 
-				debug("Invited before "..tostring(time() - lastInvite).." seconds")
+		if message == MSG_COUNT then 
+			debug("Hop count query from "..sender)
+			if ENABLED then 
+				C_ChatInfo.SendAddonMessage(ADDON_PREFIX, MSG_COUNT_ENABLED, SCOPE)
+			else 
+				C_ChatInfo.SendAddonMessage(ADDON_PREFIX, MSG_COUNT_DISABLED, SCOPE)
 			end 
-			if not lastInvite or time() - lastInvite > HOP_INVITE_COOLDOWN then   
-				debug("Inviting "..sender.." to my layer")
-				gHopInvitationSent = sender 
-				gHopInvitationTime = time()
-				InviteUnit(sender)
+		end 
+		if message == MSG_COUNT_ENABLED then 
+			if gHoppers ~= nil then 
+				debug("Count - "..sender.." - ENABLED")
+				gHoppers[sender] = 1
+			end 
+		end 
+		if message == MSG_COUNT_DISABLED then 
+			if gHoppers ~= nil then 
+				debug("Count - "..sender.." - DISABLED")
+				gHoppers[sender] = 0
+			end 
+		end 
+		if message == MSG_INVITE and ENABLED then 
+			debug("Hop requested "..message.." from "..sender.." my name "..gPlayerName.." / "..gRealmPlayerName)
+			local isLeader = partySize > 0 and UnitIsGroupLeader(gPlayerName)
+			if (sender ~= gPlayerName and sender ~= gRealmPlayerName) and (partySize == 0 or isLeader and PARTYADD) then
+				local lastInvite = INVITED[sender]
+				if lastInvite then 
+					debug("Invited before "..tostring(time() - lastInvite).." seconds")
+				end 
+				if not lastInvite or time() - lastInvite > HOP_INVITE_COOLDOWN then   
+					debug("Inviting "..sender.." to my layer")
+					gHopInvitationSent = sender 
+					gHopInvitationTime = time()
+					InviteUnit(sender)
+				end 
 			end 
 		end 
 	end
@@ -147,6 +175,14 @@ function Hopper_OnUpdate(self)
 		gHopRequested = false 
 		gHopRequestTime = 0
 	end 
+	if gHoppers ~= nil and time() - gHoppersQuery > HOPPER_QUERY_TIMEOUT then 
+		local enabled = 0
+		for k, v in pairs(gHoppers) do 
+			enabled = enabled + v 
+		end 
+		print("Query result: "..#gHoppers.." hoppers, "..enabled.." enablers")
+		gHoppers = nil 
+	end 
 end 
 
 function Hopper_PrintStatus()
@@ -183,6 +219,13 @@ function Hopper_RequestHop()
 	end 
 end 
 
+function Hopper_Count()
+	print("Counting hoppers...")
+	gHoppersQuery = time()
+	gHoppers = {}
+	C_ChatInfo.SendAddonMessage(ADDON_PREFIX, MSG_COUNT, SCOPE)
+end 
+
 function Hopper_Main(msg) 
 	local _, _, cmd, arg1 = string.find(string.upper(msg), "([%w]+)%s*(.*)$");
 	if not cmd then
@@ -210,6 +253,8 @@ function Hopper_Main(msg)
 		else 
 			print("Auto Leave Party |cffff1111disabled|r. Will ignore /hop command if in a party.")
 		end 
+	elseif  "C" == cmd or "COUNT" == cmd then
+		Hopper_Count()
 	elseif  "DEBUG" == cmd then
 		DEBUG = not DEBUG
 	elseif  "RESET" == cmd then
