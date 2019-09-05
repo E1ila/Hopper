@@ -8,7 +8,7 @@ local MSG_INVITE = "inv"
 local ADDON_PREFIX = "ZE2okI8Vx5H72L"
 local SCOPE = "GUILD"
 local HOP_REQUEST_TIMEOUT = 10
-local HOP_ACCEPT_TIMEOUT = 5
+local HOP_ACCEPT_TIMEOUT = 60
 local HOP_REQUEST_COOLDOWN = 10
 local HOP_INVITE_COOLDOWN = 1200 -- wait 20 minutes before inviting someone again
 local AUTO_LEAVE_DELAY = 1
@@ -20,6 +20,7 @@ local gHopRequested = false
 local gShouldAutoLeave = 0
 local gHopInvitationSent = nil
 local gHopInvitationTime = 0
+local gHopRequestRetry = false
 DEBUG = false
 
 local function print(text)
@@ -118,7 +119,7 @@ function Hopper_OnEvent(self, event, arg1, arg2, arg3, arg4, arg5)
 	end 
 
 	if event == "GROUP_JOINED" then 
-		if gHopInvitationTime > 0 and time() - gHopInvitationTime < HOP_ACCEPT_TIMEOUT then 
+		if gHopInvitationTime > 0 and time() - gHopInvitationTime < HOP_ACCEPT_TIMEOUT and UnitInParty(gHopInvitationSent) then 
 			debug("Group joined, logging "..gHopInvitationSent.." invite time")
 			INVITED[gHopInvitationSent] = gHopInvitationTime
 			gHopInvitationTime = 0
@@ -132,6 +133,13 @@ function Hopper_OnUpdate(self)
 	if gShouldAutoLeave > 0 and time() - gShouldAutoLeave >= AUTO_LEAVE_DELAY then 
 		gShouldAutoLeave = 0
 		LeaveParty()
+	end 
+	if gHopRequestRetry then 
+		local partySize = GetNumGroupMembers()
+		if partySize == 0 then 
+			gHopRequestRetry = false 
+			Hopper_RequestHop()
+		end 
 	end 
 end 
 
@@ -153,6 +161,8 @@ function Hopper_RequestHop()
 	if partySize == 0 or AUTOLEAVE then 
 		if partySize > 0 then
 			LeaveParty()
+			gHopRequestRetry = true 
+			return 
 		end 
 		gHopRequestTime = time()
 		gHopRequested = true 
