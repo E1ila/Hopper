@@ -4,6 +4,7 @@ PARTYADD = true
 AUTOLEAVE = false 
 INVITED = {}
 
+local VERSION = "1.0"
 local MSG_INVITE = "inv"
 local ADDON_PREFIX = "ZE2okI8Vx5H72L"
 local SCOPE = "GUILD"
@@ -59,7 +60,7 @@ function Hopper_OnLoad(self)
 	SLASH_Hopper1 = "/hop"
     SlashCmdList["Hopper"] = Hopper_Main
 
-	print("Loaded, write |cFFFFFF00/hop|r to change layer, |cFFFFFF00/hop h|r for help.")
+	print("Version "..VERSION.." loaded, write |cFFFFFF00/hop|r to change layer, |cFFFFFF00/hop h|r for help.")
 	Hopper_PrintStatus()
 
 	self:SetScript("OnEvent", Hopper_OnEvent)
