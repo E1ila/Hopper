@@ -1,6 +1,6 @@
 
 local ADDON_PREFIX = "ZE2okI8Vx5H72L"
-local SCOPE = "PARTY"
+local SCOPE = "GUILD"
 local gPlayerName = nil 
 
 local function print(text)
