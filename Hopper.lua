@@ -5,7 +5,7 @@ AUTOLEAVE = false
 INVITED = {}
 AUTO_LEAVE_DELAY = 5
 
-local VERSION = "1.0"
+local VERSION = "1.0.1"
 local MSG_INVITE = "inv"
 local MSG_COUNT = "count"
 local MSG_COUNT_ENABLED = "count-en"
