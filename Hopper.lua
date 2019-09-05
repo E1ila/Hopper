@@ -83,7 +83,7 @@ function Hopper_OnLoad(self)
 	SLASH_Hopper1 = "/hop"
     SlashCmdList["Hopper"] = Hopper_Main
 
-	print("|cFFFF8080"..VERSION.."|r loaded, write |cFFFFFF00/hop|r to change layer, |cFFFFFF00/hop h|r for help.")
+	print("|cffff4040"..VERSION.."|r loaded, write |cFFFFFF00/hop|r to change layer, |cFFFFFF00/hop h|r for help.")
 	Hopper_PrintStatus()
 
 	self:SetScript("OnEvent", Hopper_OnEvent)
