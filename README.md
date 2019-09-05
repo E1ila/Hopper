@@ -1,4 +1,4 @@
-# AHDump
+# Hopper
 WoW Classic 1.13 Addon - Easy hopping between layers for guildies.
 
 **Requires other guild members to have this addon as well.**
