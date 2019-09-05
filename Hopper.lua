@@ -55,7 +55,11 @@ local function getRealmName(playerName)
 end 
 
 local function removeRealmName(playerRealmName) 
-	return string.gsub(playerRealmName, "-"..gRealmName:gsub("%s+", ""), "") 
+	local fixedRealmName = gRealmName:gsub("%s+", "")
+	if string.match(playerRealmName, fixedRealmName) then 
+		return string.gsub(playerRealmName, "-"..fixedRealmName, "") 
+	end 
+	return playerRealmName
 end 
 
 local function splitCsv(text, sep) 
@@ -106,15 +110,14 @@ function Hopper_OnEvent(self, event, arg1, arg2, arg3, arg4, arg5)
 	if event == "GROUP_ROSTER_UPDATE" then 
 		-- debug("GROUP_ROSTER_UPDATE")
 		if gHopInvitationTime > 0 and time() - gHopInvitationTime < HOP_ACCEPT_TIMEOUT then 
-			debug("gHopInvitationSent in party = "..tostring(UnitInParty(gHopInvitationSent)))
-			-- when this event triggered, party hasn't changed yet
+			-- debug("gHopInvitationSent in party = "..tostring(UnitInParty(gHopInvitationSent)))
 			-- debug("Checking if "..gHopInvitationSent.." is in party: "..tostring(UnitInParty(gHopInvitationSent)))
-			-- if UnitInParty(gHopInvitationSent) then 
+			if UnitInParty(gHopInvitationSent) then 
 				debug("Group joined, logging "..gHopInvitationSent.." invite time")
 				INVITED[gHopInvitationSent] = gHopInvitationTime
 				gHopInvitationTime = 0
 				gHopInvitationSent = nil 
-			-- end 
+			end 
 		end 
 	end 
 
@@ -211,7 +214,7 @@ function Hopper_HandleAddonMessage(text, channel, sender, target)
 		debug("Hop requested "..message.." from "..sender.." my name "..gPlayerName.." / "..gRealmPlayerName)
 		local isLeader = partySize > 0 and UnitIsGroupLeader(gPlayerName)
 		if (sender ~= gPlayerName and sender ~= gRealmPlayerName) and (partySize == 0 or isLeader and PARTYADD) then
-			local lastInvite = INVITED[sender]
+			local lastInvite = INVITED[removeRealmName(sender)]
 			if lastInvite then 
 				debug("Invited before "..tostring(time() - lastInvite).." seconds")
 			end 
