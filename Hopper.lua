@@ -177,10 +177,12 @@ function Hopper_OnUpdate(self)
 	end 
 	if gHoppers ~= nil and time() - gHoppersQuery > HOPPER_QUERY_TIMEOUT then 
 		local enabled = 0
+		local total = 0
 		for k, v in pairs(gHoppers) do 
 			enabled = enabled + v 
+			total = total + 1
 		end 
-		print("Query result: "..#gHoppers.." hoppers, "..enabled.." enablers")
+		print("Query result: "..total.." hoppers, "..enabled.." enablers")
 		gHoppers = nil 
 	end 
 end 
@@ -254,7 +256,9 @@ function Hopper_Main(msg)
 			print("Auto Leave Party |cffff1111disabled|r. Will ignore /hop command if in a party.")
 		end 
 	elseif  "C" == cmd or "COUNT" == cmd then
-		Hopper_Count()
+		if not gHoppers then 
+			Hopper_Count()
+		end 
 	elseif  "DEBUG" == cmd then
 		DEBUG = not DEBUG
 	elseif  "RESET" == cmd then
