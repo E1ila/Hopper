@@ -3,6 +3,7 @@ ENABLED = true
 PARTYADD = true
 AUTOLEAVE = false 
 INVITED = {}
+AUTO_LEAVE_DELAY = 5
 
 local VERSION = "1.0"
 local MSG_INVITE = "inv"
@@ -16,7 +17,6 @@ local HOP_REQUEST_TIMEOUT = 10
 local HOP_ACCEPT_TIMEOUT = 60
 local HOP_REQUEST_COOLDOWN = 10
 local HOP_INVITE_COOLDOWN = 1200 -- wait 20 minutes before inviting someone again
-local AUTO_LEAVE_DELAY = 5
 local gPlayerName = nil 
 local gRealmName = nil 
 local gRealmPlayerName = nil 
