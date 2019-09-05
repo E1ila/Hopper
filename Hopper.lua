@@ -40,7 +40,7 @@ end
 
 function Hopper_OnEvent(event, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)
 	if (event == "CHAT_MSG_ADDON") then
-		p("Incoming Message: ["..emptyIfNil(arg1).."] ["..emptyIfNil(arg2).."] ["..emptyIfNil(arg3).."] ["..emptyIfNil(arg4).."] ["..emptyIfNil(arg5).."] ["..emptyIfNil(arg6).."] ["..emptyIfNil(arg7).."] ["..emptyIfNil(arg8).."] ["..emptyIfNil(arg9).."]")
+		p("Incoming Message: {"..event.."} ["..emptyIfNil(arg1).."] ["..emptyIfNil(arg2).."] ["..emptyIfNil(arg3).."] ["..emptyIfNil(arg4).."] ["..emptyIfNil(arg5).."] ["..emptyIfNil(arg6).."] ["..emptyIfNil(arg7).."] ["..emptyIfNil(arg8).."] ["..emptyIfNil(arg9).."]")
 	end
 end
 
