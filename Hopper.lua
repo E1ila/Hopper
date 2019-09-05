@@ -1,7 +1,12 @@
 
+ENABLED = true
+PARTYADD = true
+
 local ADDON_PREFIX = "ZE2okI8Vx5H72L"
 local SCOPE = "GUILD"
 local gPlayerName = nil 
+
+local MSG_INVITE = "inv"
 
 local function print(text)
     DEFAULT_CHAT_FRAME:AddMessage(text)
@@ -30,7 +35,8 @@ function Hopper_OnLoad(self)
 	SLASH_Hopper1 = "/hop"
     SlashCmdList["Hopper"] = Hopper_Main
 
-	p("Loaded, write |cFF00FF00/hop help|r for options")
+	p("Loaded, write |cFFFFFF00/hop|r to change layer, |cFFFFFF00/hop h|r for help.")
+	Hopper_PrintStatus()
 
 	self:SetScript("OnEvent", Hopper_OnEvent)
 	self:RegisterEvent("CHAT_MSG_ADDON")
@@ -42,10 +48,10 @@ function Hopper_OnLoad(self)
 end 
 
 function Hopper_OnEvent(self, event, prefix, message, distribution, sender)
-	if (event == "CHAT_MSG_ADDON") then
-		-- p("Incoming Message: {"..event.."} ["..emptyIfNil(arg1).."] ["..emptyIfNil(arg2).."] ["..emptyIfNil(arg3).."] ["..emptyIfNil(arg4).."] ["..emptyIfNil(arg5).."] ["..emptyIfNil(arg6).."] ["..emptyIfNil(arg7).."] ["..emptyIfNil(arg8).."] ["..emptyIfNil(arg9).."]")
-		p(event, prefix, message, distribution, sender)
-		if sender ~= gPlayerName then
+	if (ENABLED and event == "CHAT_MSG_ADDON") then
+		local partySize = GetNumGroupMembers()
+		local isLeader = partySize > 0 and UnitIsGroupLeader(gPlayerName)
+		if message == MSG_INVITE and sender ~= gPlayerName and (partySize == 0 or isLeader and PARTYADD) then
 			InviteUnit(sender)
 		end 
 	end
@@ -54,15 +60,35 @@ end
 function Hopper_OnUpdate(self)
 end 
 
+function Hopper_PrintStatus()
+	if ENABLED then 
+		p("Auto invite |cff11ff11enabled|r, write |cFFFFFF00/hop d|r to disable.")
+	else 
+		p("Auto invite |cffff1111disabled|r, write |cFFFFFF00/hop e|r to enable.")
+	end 
+end 
+
 function Hopper_Main(msg) 
 	local _, _, cmd, arg1 = string.find(string.upper(msg), "([%w]+)%s*(.*)$");
 	if not cmd then
-	elseif  "S" == cmd or "SEND" == cmd then
-		C_ChatInfo.SendAddonMessage(ADDON_PREFIX, "teeest", SCOPE)
-	elseif  "R" == cmd or "RESET" == cmd then
+		C_ChatInfo.SendAddonMessage(ADDON_PREFIX, MSG_INVITE, SCOPE)
+	elseif  "D" == cmd or "DISABLE" == cmd then
+		ENABLED = false
+		Hopper_PrintStatus()
+	elseif  "E" == cmd or "ENABLE" == cmd then
+		ENABLED = true 
+		Hopper_PrintStatus()
+	elseif  "P" == cmd or "PARTYADD" == cmd then
+		PARTYADD = not PARTYADD
+		if PARTYADD then 
+			p("Party Add |cff11ff11enabled|r. Will add to party, if leading.")
+		else 
+			p("Party Add |cffff1111disabled|r. Will not add to party.")
+		end 
     elseif  "H" == cmd or "HELP" == cmd then
         p("Commands: ")
-        p(" |cFF00FF00/ahdump|r - scan AH")
-        p(" |cFF00FF00/ahdump c <CLASS_INDEX>|r - scan only class index")
+        p(" |cFFFFFF00/hop|r - change layer")
+        p(" |cFFFFFF00/hop e|r - enable auto invite of guild members")
+        p(" |cFFFFFF00/hop d|r - disable auto invite")
 	end
 end 

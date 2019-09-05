@@ -3,6 +3,6 @@
 ## Title: Hopper
 ## Notes: Allows easy hopping between layers
 ## SavedVariables: 
-## SavedVariablesPerCharacter: 
+## SavedVariablesPerCharacter: ENABLED, PARTYADD
 Hopper.lua
 Hopper.xml
