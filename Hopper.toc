@@ -1,0 +1,8 @@
+## Interface: 11200
+## Author: E1ila
+## Title: Hopper
+## Notes: Allows easy hopping between layers
+## SavedVariables: 
+## SavedVariablesPerCharacter: 
+Hopper.lua
+Hopper.xml

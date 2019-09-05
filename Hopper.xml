@@ -1,0 +1,12 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.blizzard.com/wow/ui/..\..\FrameXML\UI.xsd">
+    <Script File="Hopper.lua"/>
+    <Frame name="HopperFrame">
+        <Scripts>
+            <OnLoad>Hopper_OnLoad(self)</OnLoad>
+            <OnUpdate>Hopper_OnUpdate(self)</OnUpdate>
+            <OnEvent>Hopper_OnEvent(event, arg1)</OnEvent>
+        </Scripts>
+    </Frame>
+</Ui>
