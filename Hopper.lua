@@ -8,7 +8,7 @@ DEBUG = false
 CHANNEL_NAME = "layer"
 CHANNEL_MSG = "layer"
 
-local VERSION = "1.0.10"
+local VERSION = "1.0.11"
 local CHANNEL_WHISPER = "WHISPER"
 local CHANNEL_GUILD = "GUILD"
 local MSG_INVITE = "inv"
@@ -348,8 +348,11 @@ end
 -- Commands
 
 function Hopper_RequestHop()
+	if not IsInGuild() and not gToPlayer and CHANNEL_NAME and Hopper_IsOnChannel() then 
+		gPlayerName = "CHANNEL"
+	end 
 	if not IsInGuild() and not gToPlayer then 
-		printerr("You are not in a guild, this addon only works between guild members.")
+		printerr("You are not in a guild and not in "..CHANNEL_NAME.." channel, join either.")
 		return 
 	end 
 	local partySize = GetNumGroupMembers()
