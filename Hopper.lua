@@ -3,12 +3,12 @@ ENABLED = true
 PARTYADD = true
 AUTOLEAVE = false 
 INVITED = {}
-AUTO_LEAVE_DELAY = 2
+AUTO_LEAVE_DELAY = 3
 DEBUG = false
 CHANNEL_NAME = "layer"
 CHANNEL_MSG = "layer"
 
-local VERSION = "1.0.9"
+local VERSION = "1.0.10"
 local CHANNEL_WHISPER = "WHISPER"
 local CHANNEL_GUILD = "GUILD"
 local MSG_INVITE = "inv"
@@ -364,7 +364,8 @@ function Hopper_RequestHop()
 			gHopRequestRetry = true 
 			return 
 		end 
-		Hopper_StartLayerChangeDetection()
+		-- Hopper_StartLayerChangeDetection()
+		Hopper_RequestHop_Send()
 	else 
 		printerr("Can't hop while in a party, leave it first.")
 	end 
