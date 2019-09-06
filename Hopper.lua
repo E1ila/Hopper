@@ -5,8 +5,10 @@ AUTOLEAVE = false
 INVITED = {}
 AUTO_LEAVE_DELAY = 2
 DEBUG = false
+CHANNEL_NAME = "layer"
+CHANNEL_MSG = "layer"
 
-local VERSION = "1.0.8"
+local VERSION = "1.0.9"
 local CHANNEL_WHISPER = "WHISPER"
 local CHANNEL_GUILD = "GUILD"
 local MSG_INVITE = "inv"
@@ -17,6 +19,7 @@ local ADDON_PREFIX = "ZE2okI8Vx5H72L"
 local SCOPE = CHANNEL_GUILD
 local HOPPER_QUERY_TIMEOUT = 10
 local HOP_REQUEST_TIMEOUT = 10
+local HOP_REQUEST_CHANNEL_RESORT = 3
 local HOP_ACCEPT_TIMEOUT = 60
 local HOP_REQUEST_COOLDOWN = 10
 local HOP_INVITE_COOLDOWN = 600 -- wait 10 minutes before inviting someone again
@@ -155,10 +158,15 @@ function Hopper_OnUpdate(self)
 			Hopper_RequestHop()
 		end 
 	end 
-	if gHopRequested and t - gHopRequestTime > HOP_REQUEST_TIMEOUT then 
-		print("No one seems to respond. Make sure your guild members install this addon.")
-		gHopRequested = false 
-		gHopRequestTime = 0
+	if gHopRequested then 
+		if t - gHopRequestTime > HOP_REQUEST_TIMEOUT then 
+			print("No one seems to respond. Make sure your guild members install this addon.")
+			gHopRequested = false 
+			gHopRequestTime = 0
+		end 
+		if t - gHopRequestTime > HOP_REQUEST_CHANNEL_RESORT and CHANNEL_NAME and not gToPlayer then 
+			Hopper_RequestFromChannel()
+		end 
 	end 
 	if gHoppers ~= nil and t - gHoppersQuery > HOPPER_QUERY_TIMEOUT then 
 		local enabled = 0
@@ -312,6 +320,7 @@ function Hopper_ProcessWhoResult(query, result, complete)
 		for k, v in pairs(result) do 
 			gWhoResult[v.Name] = 1
 		end 
+		Hopper_RequestHop_Send()
 	else 
 		local count = 0
 		for k, v in pairs(result) do 
@@ -353,18 +362,33 @@ function Hopper_RequestHop()
 			return 
 		end 
 		Hopper_StartLayerChangeDetection()
-
-		print("Sending hop request...")
-		gHopRequestTime = time()
-		gHopRequested = true 
-		if gToPlayer then 
-			C_ChatInfo.SendAddonMessage(ADDON_PREFIX, MSG_INVITE, CHANNEL_WHISPER, gToPlayer)
-		else 
-			C_ChatInfo.SendAddonMessage(ADDON_PREFIX, MSG_INVITE, SCOPE)
-		end 
 	else 
 		printerr("Can't hop while in a party, leave it first.")
 	end 
+end 
+
+function Hopper_RequestHop_Send() 
+	print("Sending hop request...")
+	gHopRequestTime = time()
+	gHopRequested = true 
+	if gToPlayer then 
+		if gToPlayer == "CHANNEL" then 
+			Hopper_RequestFromChannel()
+		else 
+			C_ChatInfo.SendAddonMessage(ADDON_PREFIX, MSG_INVITE, CHANNEL_WHISPER, gToPlayer)
+		end 
+	else 
+		C_ChatInfo.SendAddonMessage(ADDON_PREFIX, MSG_INVITE, SCOPE)
+	end 
+end 
+
+function Hopper_RequestFromChannel() 
+	for i=1,15 do
+		local id, name = GetChannelName(i);
+		if name and string.lower(name) == string.lower(CHANNEL_NAME) then
+			SendChatMessage(CHANNEL_MSG, "CHANNEL", nil, id);
+		end
+	end	  
 end 
 
 function Hopper_Count()
@@ -420,10 +444,26 @@ function Hopper_Main(msg)
 		if not gHoppers then 
 			Hopper_Count()
 		end 
+	elseif  "CH" == cmd or "CHANNEL" == cmd then
+		gToPlayer = "CHANNEL"
+		Hopper_RequestHop()
+	elseif  "CHNAME" == cmd then
+		if arg1 and string.len(arg1) > 0 then 
+			CHANNEL_NAME = arg1 
+			print("Channel request set to |cff11ff11"..CHANNEL_NAME.."|r")
+		else 
+			CHANNEL_NAME = nil 
+			print("Channel request |cffff1111disabled|r")
+		end 
+	elseif  "CHTXT" == cmd  then
+		if arg1 and string.len(arg1) > 0 then 
+			CHANNEL_MSG = arg1 
+			print("Channel request message set to |cff11ff11"..CHANNEL_MSG.."|r")
+		end 
 	elseif  "TEST" == cmd then
-		gWhoResult = nil 
-		Hopper_SampleWho()
-		gLayerDetectionStarted = time()
+		-- gWhoResult = nil 
+		-- Hopper_SampleWho()
+		-- gLayerDetectionStarted = time()
 	elseif  "DEBUG" == cmd then
 		DEBUG = not DEBUG
 		print("Debug = "..tostring(DEBUG))
@@ -438,5 +478,8 @@ function Hopper_Main(msg)
         print(" |cFFFFFF00/hop p|r - enable/disable adding auto inviting members to existing party ("..tostring(PARTYADD)..")")
         print(" |cFFFFFF00/hop l|r - enable/disable auto leave current party for /hop ("..tostring(AUTOLEAVE)..")")
         print(" |cFFFFFF00/hop ld <seconds>|r - set leave delay, don't make it too short to allow layer switching ("..tostring(AUTO_LEAVE_DELAY)..")")
+        print(" |cFFFFFF00/hop ch|r - will request for layer invite in public channel, if set")
+        print(" |cFFFFFF00/hop chname <channel name>|r - will request for layer invite in this channel if no guildy responds ("..tostring(CHANNEL_NAME)..")")
+        print(" |cFFFFFF00/hop chtxt <request text>|r - this text will be sent to request channel if enabled ("..tostring(CHANNEL_MSG)..")")
 	end
 end 

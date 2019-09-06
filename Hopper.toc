@@ -4,7 +4,7 @@
 ## Notes: Allows easy hopping between layers
 ## OptionalDeps: LibWho-2.0, LibStub, CallbackHandler-1.0
 ## SavedVariables: AUTO_LEAVE_DELAY
-## SavedVariablesPerCharacter: ENABLED, PARTYADD, AUTOLEAVE, INVITED, DEBUG
+## SavedVariablesPerCharacter: ENABLED, PARTYADD, AUTOLEAVE, INVITED, DEBUG, CHANNEL_NAME, CHANNEL_MSG
 
 #@no-lib-strip@
 libs\LibStub\LibStub.lua
