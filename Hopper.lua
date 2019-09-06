@@ -8,7 +8,7 @@ DEBUG = false
 CHANNEL_NAME = "layer"
 CHANNEL_MSG = "layer"
 
-local VERSION = "1.0.11"
+local VERSION = "1.0.12"
 local CHANNEL_WHISPER = "WHISPER"
 local CHANNEL_GUILD = "GUILD"
 local MSG_INVITE = "inv"
@@ -47,6 +47,7 @@ local gLayerDetectionWho = nil
 local gSentWhoQuery = nil
 local gWhoResult = nil
 local gWhoResultSize = 0
+local gWhoText = nil 
 local libWho = nil 
 
 ------------------------------------------------------------------------------
@@ -290,26 +291,30 @@ end
 -- Layer detection
 
 function Hopper_SampleWho() 
-	local whotext
-	if gFaction == "Horde" then whotext = 'z-"Orgrimmar"' else whotext = 'z-"Stormwind"' end 
+	if not gWhoText then 
+		local playerLevel = UnitLevel("player")
+		gWhoText = 'z-"'..GetZoneText()..'" '..tostring(math.max(playerLevel-3, 1)).."-"..tostring(math.min(playerLevel+3, 60))
+		-- if gFaction == "Horde" then whotext = 'z-"Orgrimmar"' else whotext = 'z-"Stormwind"' end 
+	end 
 
 	wholib = wholib or LibStub:GetLibrary("LibWho-2.0", true)
 	gSentWhoQuery = time()
 	if wholib then
-		debug("Sending who query "..whotext)
-		wholib:Who(whotext, {
+		debug("Sending who query "..gWhoText)
+		wholib:Who(gWhoText, {
 			queue = wholib.WHOLIB_QUEUE_QUIET,
 			flags = 0,
 			callback = Hopper_ProcessWhoResult
 		})
 	else
 		printerr("No wholib detected")
-		-- SendWho(whotext)
+		-- SendWho(gWhoText)
 	end
 end 
 
 function Hopper_StartLayerChangeDetection() 
 	gWhoResult = nil 
+	gWhoText = nil 
 	Hopper_SampleWho()
 	gLayerDetectionStarted = time()
 	gLayerDetectionWho = gLayerDetectionStarted
@@ -341,6 +346,7 @@ function Hopper_OnLayerChange()
 	gLayerDetectionStarted = nil 
 	gLayerDetectionWho = nil
 	gWhoResult = nil 
+	gWhoText = nil 
 	print("|cffff2222 !! Layer changed !!")
 end 
 
@@ -367,8 +373,8 @@ function Hopper_RequestHop()
 			gHopRequestRetry = true 
 			return 
 		end 
-		-- Hopper_StartLayerChangeDetection()
-		Hopper_RequestHop_Send()
+		Hopper_StartLayerChangeDetection()
+		-- Hopper_RequestHop_Send()
 	else 
 		printerr("Can't hop while in a party, leave it first.")
 	end 
