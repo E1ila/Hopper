@@ -8,7 +8,7 @@ DEBUG = false
 CHANNEL_NAME = "layer"
 CHANNEL_MSG = "layer"
 
-local VERSION = "1.0.12"
+local VERSION = "1.0.13"
 local CHANNEL_WHISPER = "WHISPER"
 local CHANNEL_GUILD = "GUILD"
 local MSG_INVITE = "inv"
@@ -169,6 +169,7 @@ function Hopper_OnUpdate(self)
 			gHopRequestTime = 0
 		end 
 		if t - gHopRequestTime > HOP_REQUEST_CHANNEL_RESORT and CHANNEL_NAME and not gToPlayer then 
+			gToPlayer = "CHANNEL"
 			Hopper_RequestFromChannel()
 		end 
 	end 
