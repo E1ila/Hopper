@@ -3,9 +3,10 @@ ENABLED = true
 PARTYADD = true
 AUTOLEAVE = false 
 INVITED = {}
-AUTO_LEAVE_DELAY = 1
+AUTO_LEAVE_DELAY = 2
+DEBUG = false
 
-local VERSION = "1.0.7"
+local VERSION = "1.0.8"
 local CHANNEL_WHISPER = "WHISPER"
 local CHANNEL_GUILD = "GUILD"
 local MSG_INVITE = "inv"
@@ -19,6 +20,10 @@ local HOP_REQUEST_TIMEOUT = 10
 local HOP_ACCEPT_TIMEOUT = 60
 local HOP_REQUEST_COOLDOWN = 10
 local HOP_INVITE_COOLDOWN = 600 -- wait 10 minutes before inviting someone again
+local IDENTICAL_PLAYERS_CHANGED = 0.1 -- allow 10% identical players (10/50)
+local LAYER_DETECTION_TIMEOUT = 90
+local LAYER_DETECTION_WHO = 10
+
 local gPlayerName = nil 
 local gRealmName = nil 
 local gRealmPlayerName = nil 
@@ -31,7 +36,18 @@ local gHopRequestRetry = false
 local gHoppers = nil
 local gHoppersQuery = nil
 local gToPlayer = nil
-DEBUG = false
+local gInLayerOf = nil
+
+local gLayerID = nil
+local gLayerDetectionStarted = nil
+local gLayerDetectionWho = nil
+local gSentWhoQuery = nil
+local gWhoResult = nil
+local gWhoResultSize = 0
+local libWho = nil 
+
+------------------------------------------------------------------------------
+-- Utils
 
 local function print(text)
     DEFAULT_CHAT_FRAME:AddMessage("|cFFFF8080Hopper |r".. text)
@@ -72,7 +88,8 @@ local function splitCsv(text, sep)
 	return result 
 end 
 
-------------------------------------------------
+------------------------------------------------------------------------------
+-- Events
 
 function Hopper_OnLoad(self)
 	gRealmName = GetRealmName()
@@ -126,7 +143,8 @@ function Hopper_OnEvent(self, event, arg1, arg2, arg3, arg4, arg5)
 end
 
 function Hopper_OnUpdate(self)
-	if gShouldAutoLeave > 0 and time() - gShouldAutoLeave >= AUTO_LEAVE_DELAY then 
+	local t = time()
+	if gShouldAutoLeave > 0 and t - gShouldAutoLeave >= AUTO_LEAVE_DELAY then 
 		gShouldAutoLeave = 0
 		LeaveParty()
 	end 
@@ -137,12 +155,12 @@ function Hopper_OnUpdate(self)
 			Hopper_RequestHop()
 		end 
 	end 
-	if gHopRequested and time() - gHopRequestTime > HOP_REQUEST_TIMEOUT then 
+	if gHopRequested and t - gHopRequestTime > HOP_REQUEST_TIMEOUT then 
 		print("No one seems to respond. Make sure your guild members install this addon.")
 		gHopRequested = false 
 		gHopRequestTime = 0
 	end 
-	if gHoppers ~= nil and time() - gHoppersQuery > HOPPER_QUERY_TIMEOUT then 
+	if gHoppers ~= nil and t - gHoppersQuery > HOPPER_QUERY_TIMEOUT then 
 		local enabled = 0
 		local total = 0
 		for k, v in pairs(gHoppers) do 
@@ -154,13 +172,37 @@ function Hopper_OnUpdate(self)
 		print("Query result: "..total.." hoppers, "..enabled.." enablers")
 		gHoppers = nil 
 	end 
+	if gLayerDetectionStarted then
+		if t - gLayerDetectionStarted > LAYER_DETECTION_TIMEOUT then 
+			gLayerDetectionStarted = nil 
+			gLayerDetectionWho = nil 
+			gWhoResult = {}
+			debug("Layer detection timeout, stopping")
+		else 
+			inCombat = UnitAffectingCombat("player")
+			if inCombat then 
+				gLayerDetectionStarted = t 
+				gLayerDetectionWho = t 
+			else
+				if t - gLayerDetectionWho > LAYER_DETECTION_WHO then 
+					gLayerDetectionWho = t
+					Hopper_SampleWho() 
+				end 
+			end 
+		end 
+	end 
 end 
 
+------------------------------------------------------------------------------
+-- Party 
+
+-- sender = realm player name
 function Hopper_HandleIncomingPartyInvite(sender) 
 	local partySize = GetNumGroupMembers()
 	debug("Party requested from "..sender..", partySize = "..partySize..", gHopRequestTime = "..gHopRequestTime)
 	if partySize == 0 and gHopRequested and time() - gHopRequestTime <= HOP_REQUEST_TIMEOUT then 
 		print("Hopped into "..sender.."'s world!")
+		gInLayerOf = sender 
 		AcceptGroup()
 		gHopRequested = false 
 		if AUTO_LEAVE_DELAY > 0 then 
@@ -179,6 +221,9 @@ function Hopper_HandleIncomingPartyInvite(sender)
 		end
 	end 
 end 
+
+------------------------------------------------------------------------------
+-- Addon Comm
 
 function Hopper_HandleAddonMessage(text, channel, sender, target)
 	local partySize = GetNumGroupMembers()
@@ -230,13 +275,65 @@ function Hopper_HandleAddonMessage(text, channel, sender, target)
 	end 
 end 
 
-function Hopper_PrintStatus()
-	if ENABLED then 
-		print("Auto invite |cff11ff11enabled|r, write |cFFFFFF00/hop d|r to disable.")
+------------------------------------------------------------------------------
+-- Layer detection
+
+function Hopper_SampleWho() 
+	local whotext
+	if gFaction == "Horde" then whotext = 'z-"Orgrimmar"' else whotext = 'z-"Stormwind"' end 
+
+	wholib = wholib or LibStub:GetLibrary("LibWho-2.0", true)
+	gSentWhoQuery = time()
+	if wholib then
+		debug("Sending who query "..whotext)
+		wholib:Who(whotext, {
+			queue = wholib.WHOLIB_QUEUE_QUIET,
+			flags = 0,
+			callback = Hopper_ProcessWhoResult
+		})
+	else
+		printerr("No wholib detected")
+		-- SendWho(whotext)
+	end
+end 
+
+function Hopper_StartLayerChangeDetection() 
+	gWhoResult = nil 
+	Hopper_SampleWho()
+	gLayerDetectionStarted = time()
+	gLayerDetectionWho = gLayerDetectionStarted
+end 
+
+function Hopper_ProcessWhoResult(query, result, complete)
+	debug("Who query returned "..#result.." results")
+	if not gWhoResult then 
+		gWhoResultSize = #result 
+		gWhoResult = {}
+		for k, v in pairs(result) do 
+			gWhoResult[v.Name] = 1
+		end 
 	else 
-		print("Auto invite |cffff1111disabled|r, write |cFFFFFF00/hop e|r to enable.")
+		local count = 0
+		for k, v in pairs(result) do 
+			if gWhoResult[v.Name] then count = count + 1 end
+		end 
+		local commonPercent = count / gWhoResultSize
+		debug("Who common = "..tostring(math.floor(commonPercent * 100)).."% "..count.."/"..gWhoResultSize)
+		if commonPercent <= IDENTICAL_PLAYERS_CHANGED then 
+			Hopper_OnLayerChange()
+		end 
 	end 
 end 
+
+function Hopper_OnLayerChange() 
+	gLayerDetectionStarted = nil 
+	gLayerDetectionWho = nil
+	gWhoResult = nil 
+	print("|cffff2222 !! Layer changed !!")
+end 
+
+------------------------------------------------------------------------------
+-- Commands
 
 function Hopper_RequestHop()
 	if not IsInGuild() and not gToPlayer then 
@@ -255,6 +352,8 @@ function Hopper_RequestHop()
 			gHopRequestRetry = true 
 			return 
 		end 
+		Hopper_StartLayerChangeDetection()
+
 		print("Sending hop request...")
 		gHopRequestTime = time()
 		gHopRequested = true 
@@ -273,6 +372,14 @@ function Hopper_Count()
 	gHoppersQuery = time()
 	gHoppers = {}
 	C_ChatInfo.SendAddonMessage(ADDON_PREFIX, MSG_COUNT, SCOPE)
+end 
+
+function Hopper_PrintStatus()
+	if ENABLED then 
+		print("Auto invite |cff11ff11enabled|r, write |cFFFFFF00/hop d|r to disable.")
+	else 
+		print("Auto invite |cffff1111disabled|r, write |cFFFFFF00/hop e|r to enable.")
+	end 
 end 
 
 function Hopper_Main(msg) 
@@ -313,8 +420,13 @@ function Hopper_Main(msg)
 		if not gHoppers then 
 			Hopper_Count()
 		end 
+	elseif  "TEST" == cmd then
+		gWhoResult = nil 
+		Hopper_SampleWho()
+		gLayerDetectionStarted = time()
 	elseif  "DEBUG" == cmd then
 		DEBUG = not DEBUG
+		print("Debug = "..tostring(DEBUG))
 	elseif  "RESET" == cmd then
 		INVITED = {}
     elseif  "H" == cmd or "HELP" == cmd then

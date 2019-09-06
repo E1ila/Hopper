@@ -2,7 +2,15 @@
 ## Author: E1ila
 ## Title: Hopper
 ## Notes: Allows easy hopping between layers
+## OptionalDeps: LibWho-2.0, LibStub, CallbackHandler-1.0
 ## SavedVariables: AUTO_LEAVE_DELAY
 ## SavedVariablesPerCharacter: ENABLED, PARTYADD, AUTOLEAVE, INVITED, DEBUG
+
+#@no-lib-strip@
+libs\LibStub\LibStub.lua
+libs\CallbackHandler-1.0\CallbackHandler-1.0.lua
+libs\LibWho-2.0\LibWho-2.0.lua
+#@end-no-lib-strip@
+
 Hopper.lua
 Hopper.xml
