@@ -106,6 +106,9 @@ function Hopper_OnLoad(self)
     SlashCmdList["Hopper"] = Hopper_Main
 
 	print("|cffff4040"..VERSION.."|r loaded, write |cFFFFFF00/hop|r to change layer, |cFFFFFF00/hop h|r for help.")
+	if CHANNEL_NAME and not Hopper_IsOnChannel() then 
+		print("Write |cffffff00/join "..CHANNEL_NAME.."|r to join a public channel for a bigger pool of layers.")
+	end 
 	Hopper_PrintStatus()
 
 	self:SetScript("OnEvent", Hopper_OnEvent)
@@ -389,6 +392,16 @@ function Hopper_RequestFromChannel()
 			SendChatMessage(CHANNEL_MSG, "CHANNEL", nil, id);
 		end
 	end	  
+end 
+
+function Hopper_IsOnChannel() 
+	for i=1,15 do
+		local id, name = GetChannelName(i);
+		if name and string.lower(name) == string.lower(CHANNEL_NAME) then
+			return true 
+		end
+	end	  
+	return false 
 end 
 
 function Hopper_Count()
