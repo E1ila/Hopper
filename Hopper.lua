@@ -8,10 +8,11 @@ DEBUG = false
 CHANNEL_NAME = "layer"
 CHANNEL_MSG = "layer"
 
-local VERSION = "1.0.13"
+local VERSION = "1.1.0"
 local CHANNEL_WHISPER = "WHISPER"
 local CHANNEL_GUILD = "GUILD"
 local MSG_INVITE = "inv"
+local MSG_ANNOUNCE = "announce"
 local MSG_COUNT = "count"
 local MSG_COUNT_ENABLED = "count-en"
 local MSG_COUNT_DISABLED = "count-de"
@@ -32,6 +33,7 @@ local gRealmName = nil
 local gRealmPlayerName = nil 
 local gHopRequestTime = 0
 local gHopRequested = false
+local gChooseFromAnnounce = false 
 local gShouldAutoLeave = 0
 local gHopInvitationSent = nil
 local gHopInvitationTime = 0
@@ -126,7 +128,7 @@ end
 
 function Hopper_OnEvent(self, event, arg1, arg2, arg3, arg4, arg5)
 	if event == "CHAT_MSG_ADDON" and arg1 == ADDON_PREFIX then
-		Hopper_HandleAddonMessage(arg2, arg3, arg4, arg5)
+		Hopper_HandleAddonMessage(arg2, arg3, removeRealmName(arg4), arg5)
 	end
 
 	if event == "PARTY_INVITE_REQUEST" then 
@@ -165,11 +167,13 @@ function Hopper_OnUpdate(self)
 	if gHopRequested then 
 		if t - gHopRequestTime > HOP_REQUEST_TIMEOUT then 
 			print("No one seems to respond. Make sure your guild members install this addon.")
+			gChooseFromAnnounce = false 
 			gHopRequested = false 
 			gHopRequestTime = 0
 		end 
 		if t - gHopRequestTime > HOP_REQUEST_CHANNEL_RESORT and CHANNEL_NAME and not gToPlayer then 
 			gToPlayer = "CHANNEL"
+			gChooseFromAnnounce = false 
 			Hopper_RequestFromChannel()
 		end 
 	end 
@@ -245,47 +249,44 @@ function Hopper_HandleAddonMessage(text, channel, sender, target)
 	-- debug('CHAT_MSG_ADDON ('..sender..') '..text)
 	if message == MSG_COUNT then 
 		if parts[2] then 
+			local participant = {["Enabled"] = parts[2], ["Version"] = parts[3]}
 			-- count response
 			if gHoppers ~= nil then 
 				debug("Count - "..sender..", enabled: "..parts[2]..", version: "..parts[3])
-				gHoppers[sender] = {["Enabled"] = parts[2], ["Version"] = parts[3]}
+				gHoppers[sender] = participant
 			end 	
+			if gHopRequested and gChooseFromAnnounce and participant["Enabled"] == "true" then 
+				Hopper_HandleParticipantResponse(sender, participant)
+			end 
 		else 
 			-- count query
 			debug("Hop count query from "..sender)
-			C_ChatInfo.SendAddonMessage(ADDON_PREFIX, MSG_COUNT..","..tostring(ENABLED)..","..VERSION, SCOPE)
+			Hopper_SendInfo()
 		end 
 	end 
-	if message == MSG_COUNT_ENABLED then 
-		-- old count response
-		if gHoppers ~= nil then 
-			debug("Count - "..sender.." - ENABLED")
-			gHoppers[sender] = {["Enabled"] = "true"}
-		end 
-	end 
-	if message == MSG_COUNT_DISABLED then 
-		-- old count response
-		if gHoppers ~= nil then 
-			debug("Count - "..sender.." - DISABLED")
-			gHoppers[sender] = {["Enabled"] = "false"}
-		end 
-	end 
-	if message == MSG_INVITE and ENABLED then 
+	if (message == MSG_INVITE or message == MSG_ANNOUNCE) and ENABLED then 
 		debug("Hop requested "..message.." from "..sender.." through "..channel)
 		local isLeader = partySize > 0 and UnitIsGroupLeader(gPlayerName)
-		if (sender ~= gPlayerName and sender ~= gRealmPlayerName) and (partySize == 0 or isLeader and PARTYADD) then
-			local lastInvite = INVITED[removeRealmName(sender)]
-			if lastInvite then 
-				debug("Invited before "..tostring(time() - lastInvite).." seconds")
+		if (sender ~= gPlayerName) and (partySize == 0 or isLeader and PARTYADD) then
+			local lastInvite = INVITED[sender]
+			if channel ~= CHANNEL_WHISPER and lastInvite and time() - lastInvite <= HOP_INVITE_COOLDOWN then 
+				debug("Invited "..sender.." before "..tostring(time() - lastInvite).." seconds")
+				return 
 			end 
-			if channel == CHANNEL_WHISPER or not lastInvite or time() - lastInvite > HOP_INVITE_COOLDOWN then   
-				gHopInvitationSent = removeRealmName(sender)
+			gHopInvitationSent = sender
+			if message == MSG_ANNOUNCE then 
+				Hopper_SendInfo()
+			else 
 				debug("Inviting "..gHopInvitationSent.." to my layer")
 				gHopInvitationTime = time()
 				InviteUnit(sender)
 			end 
 		end 
 	end 
+end 
+
+function Hopper_SendInfo()
+	C_ChatInfo.SendAddonMessage(ADDON_PREFIX, MSG_COUNT..","..tostring(ENABLED)..","..VERSION, SCOPE)
 end 
 
 ------------------------------------------------------------------------------
@@ -352,7 +353,7 @@ function Hopper_OnLayerChange()
 end 
 
 ------------------------------------------------------------------------------
--- Commands
+-- Hop request
 
 function Hopper_RequestHop()
 	if not IsInGuild() and not gToPlayer and CHANNEL_NAME and Hopper_IsOnChannel() then 
@@ -392,8 +393,15 @@ function Hopper_RequestHop_Send()
 			C_ChatInfo.SendAddonMessage(ADDON_PREFIX, MSG_INVITE, CHANNEL_WHISPER, gToPlayer)
 		end 
 	else 
-		C_ChatInfo.SendAddonMessage(ADDON_PREFIX, MSG_INVITE, SCOPE)
+		gChooseFromAnnounce = true
+		C_ChatInfo.SendAddonMessage(ADDON_PREFIX, MSG_ANNOUNCE, SCOPE)
 	end 
+end 
+
+function Hopper_HandleParticipantResponse(sender, participant) 
+	gToPlayer = sender 
+	gChooseFromAnnounce = false 
+	Hopper_RequestHop_Send()
 end 
 
 function Hopper_RequestFromChannel() 
@@ -414,6 +422,9 @@ function Hopper_IsOnChannel()
 	end	  
 	return false 
 end 
+
+------------------------------------------------------------------------------
+-- Commands
 
 function Hopper_Count()
 	print("Counting hoppers...")
