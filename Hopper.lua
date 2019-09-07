@@ -29,6 +29,7 @@ local IDENTICAL_PLAYERS_CHANGED = 0.1 -- allow 10% identical players (5/50)
 local LAYER_DETECTION_TIMEOUT = 90
 local LAYER_DETECTION_WHO = 10
 local MIN_WHO_COUNT = 20
+local WHO_LEVEL_RANGE = 10
 
 local gPlayerName = nil 
 local gRealmName = nil 
@@ -297,7 +298,7 @@ end
 function Hopper_SampleWho() 
 	if not gWhoText then 
 		local playerLevel = UnitLevel("player")
-		gWhoText = 'z-"'..GetZoneText()..'" '..tostring(math.max(playerLevel-3, 1)).."-"..tostring(math.min(playerLevel+3, 60))
+		gWhoText = 'z-"'..GetZoneText()..'" '..tostring(math.max(playerLevel-WHO_LEVEL_RANGE, 1)).."-"..tostring(math.min(playerLevel+WHO_LEVEL_RANGE, 60))
 		-- if gFaction == "Horde" then whotext = 'z-"Orgrimmar"' else whotext = 'z-"Stormwind"' end 
 	end 
 
