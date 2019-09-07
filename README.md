@@ -1,7 +1,7 @@
 # Hopper
 WoW Classic 1.13 Addon - Easy hopping between layers for guildies.
 
-**Requires other guild members to have this addon as well.**
+Supports the `/join layer` channel if no guildy is available, so you can use only this and remove other layer addons.
 
 # Usage
 * Download, extract and make sure folder doesn't have `-master` postfix.
