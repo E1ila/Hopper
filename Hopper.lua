@@ -2,6 +2,7 @@
 ENABLED = true
 PARTYADD = true
 AUTOLEAVE = false 
+ANNOUNCEMODE = true
 INVITED = {}
 AUTO_LEAVE_DELAY = 3
 DEBUG = false
@@ -24,9 +25,10 @@ local HOP_REQUEST_CHANNEL_RESORT = 3
 local HOP_ACCEPT_TIMEOUT = 60
 local HOP_REQUEST_COOLDOWN = 10
 local HOP_INVITE_COOLDOWN = 600 -- wait 10 minutes before inviting someone again
-local IDENTICAL_PLAYERS_CHANGED = 0.1 -- allow 10% identical players (10/50)
+local IDENTICAL_PLAYERS_CHANGED = 0.1 -- allow 10% identical players (5/50)
 local LAYER_DETECTION_TIMEOUT = 90
 local LAYER_DETECTION_WHO = 10
+local MIN_WHO_COUNT = 20
 
 local gPlayerName = nil 
 local gRealmName = nil 
@@ -330,7 +332,10 @@ function Hopper_ProcessWhoResult(query, result, complete)
 		for k, v in pairs(result) do 
 			gWhoResult[v.Name] = 1
 		end 
-		Hopper_RequestHop_Send()
+		Hopper_RequestHop_Send(false)
+		if #result < MIN_WHO_COUNT then 
+			Hopper_StopLayerDetection()
+		end 
 	else 
 		local count = 0
 		for k, v in pairs(result) do 
@@ -345,11 +350,15 @@ function Hopper_ProcessWhoResult(query, result, complete)
 end 
 
 function Hopper_OnLayerChange() 
+	Hopper_StopLayerDetection()
+	print("|cffff2222 !! Layer changed !!")
+end 
+
+function Hopper_StopLayerDetection()
 	gLayerDetectionStarted = nil 
 	gLayerDetectionWho = nil
 	gWhoResult = nil 
 	gWhoText = nil 
-	print("|cffff2222 !! Layer changed !!")
 end 
 
 ------------------------------------------------------------------------------
@@ -376,14 +385,16 @@ function Hopper_RequestHop()
 			return 
 		end 
 		Hopper_StartLayerChangeDetection()
-		-- Hopper_RequestHop_Send()
+		-- Hopper_RequestHop_Send(false)
 	else 
 		printerr("Can't hop while in a party, leave it first.")
 	end 
 end 
 
-function Hopper_RequestHop_Send() 
-	print("Sending hop request...")
+function Hopper_RequestHop_Send(quiet) 
+	if not quiet then 
+		print("Sending hop request...")
+	end 
 	gHopRequestTime = time()
 	gHopRequested = true 
 	if gToPlayer then 
@@ -393,15 +404,19 @@ function Hopper_RequestHop_Send()
 			C_ChatInfo.SendAddonMessage(ADDON_PREFIX, MSG_INVITE, CHANNEL_WHISPER, gToPlayer)
 		end 
 	else 
-		gChooseFromAnnounce = true
-		C_ChatInfo.SendAddonMessage(ADDON_PREFIX, MSG_ANNOUNCE, SCOPE)
+		if ANNOUNCEMODE then 
+			gChooseFromAnnounce = true
+			C_ChatInfo.SendAddonMessage(ADDON_PREFIX, MSG_ANNOUNCE, SCOPE)
+		else 
+			C_ChatInfo.SendAddonMessage(ADDON_PREFIX, MSG_INVITE, SCOPE)
+		end  
 	end 
 end 
 
 function Hopper_HandleParticipantResponse(sender, participant) 
 	gToPlayer = sender 
 	gChooseFromAnnounce = false 
-	Hopper_RequestHop_Send()
+	Hopper_RequestHop_Send(true)
 end 
 
 function Hopper_RequestFromChannel() 
@@ -502,6 +517,9 @@ function Hopper_Main(msg)
 	elseif  "DEBUG" == cmd then
 		DEBUG = not DEBUG
 		print("Debug = "..tostring(DEBUG))
+	elseif  "ANNOUNCE" == cmd then
+		ANNOUNCEMODE = not ANNOUNCEMODE
+		print("ANNOUNCEMODE = "..tostring(ANNOUNCEMODE))
 	elseif  "RESET" == cmd then
 		INVITED = {}
     elseif  "H" == cmd or "HELP" == cmd then
