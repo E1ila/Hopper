@@ -6,6 +6,7 @@ ANNOUNCEMODE = true
 INVITED = {}
 AUTO_LEAVE_DELAY = 3
 DEBUG = false
+CHECKWHO = true
 CHANNEL_NAME = "layer"
 CHANNEL_MSG = "layer"
 
@@ -28,8 +29,8 @@ local HOP_INVITE_COOLDOWN = 600 -- wait 10 minutes before inviting someone again
 local IDENTICAL_PLAYERS_CHANGED = 0.1 -- allow 10% identical players (5/50)
 local LAYER_DETECTION_TIMEOUT = 90
 local LAYER_DETECTION_WHO = 10
-local MIN_WHO_COUNT = 20
-local WHO_LEVEL_RANGE = 10
+local MIN_WHO_COUNT = 10
+local WHO_LEVEL_RANGE = 3
 
 local gPlayerName = nil 
 local gRealmName = nil 
@@ -343,7 +344,7 @@ function Hopper_ProcessWhoResult(query, result, complete)
 			if gWhoResult[v.Name] then count = count + 1 end
 		end 
 		local commonPercent = count / gWhoResultSize
-		debug("Who common = "..tostring(math.floor(commonPercent * 100)).."% "..count.."/"..gWhoResultSize)
+		debug("Who common |cffffff00"..tostring(math.floor(commonPercent * 100)).."|cff999900%|cFF999999 "..count.."/"..gWhoResultSize)
 		if commonPercent <= IDENTICAL_PLAYERS_CHANGED then 
 			Hopper_OnLayerChange()
 		end 
@@ -385,8 +386,11 @@ function Hopper_RequestHop()
 			gHopRequestRetry = true 
 			return 
 		end 
-		Hopper_StartLayerChangeDetection()
-		-- Hopper_RequestHop_Send(false)
+		if CHECKWHO then 
+			Hopper_StartLayerChangeDetection()
+		else 
+			Hopper_RequestHop_Send(false)
+		end 
 	else 
 		printerr("Can't hop while in a party, leave it first.")
 	end 
@@ -424,7 +428,9 @@ function Hopper_RequestFromChannel()
 	for i=1,15 do
 		local id, name = GetChannelName(i);
 		if name and string.lower(name) == string.lower(CHANNEL_NAME) then
+			debug("Requesting hop from channel...")
 			SendChatMessage(CHANNEL_MSG, "CHANNEL", nil, id);
+			return 
 		end
 	end	  
 end 
@@ -518,6 +524,9 @@ function Hopper_Main(msg)
 	elseif  "DEBUG" == cmd then
 		DEBUG = not DEBUG
 		print("Debug = "..tostring(DEBUG))
+	elseif  "WHO" == cmd then
+		CHECKWHO = not CHECKWHO
+		print("CHECKWHO = "..tostring(CHECKWHO))
 	elseif  "ANNOUNCE" == cmd then
 		ANNOUNCEMODE = not ANNOUNCEMODE
 		print("ANNOUNCEMODE = "..tostring(ANNOUNCEMODE))
