@@ -375,7 +375,9 @@ function Hopper_OnLayerChange()
 end 
 
 function Hopper_OnLayerNotChanged()
-	Hopper_RenameLayerID(gPreviousLayerID, gLayerID)
+	if gPreviousLayerID then 
+		Hopper_RenameLayerID(gPreviousLayerID, gLayerID)
+	end 
 	print("|cffff0000 !! Layer not changed !!")
 end 
 
