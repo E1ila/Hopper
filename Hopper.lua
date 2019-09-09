@@ -6,10 +6,11 @@ ANNOUNCEMODE = true
 INVITED = {}
 AUTO_LEAVE_DELAY = 3
 DEBUG = false
+CHECKWHO = true
 CHANNEL_NAME = "layer"
 CHANNEL_MSG = "layer"
 
-local VERSION = "1.1.0"
+local VERSION = "1.2.0"
 local CHANNEL_WHISPER = "WHISPER"
 local CHANNEL_GUILD = "GUILD"
 local MSG_INVITE = "inv"
@@ -17,6 +18,7 @@ local MSG_ANNOUNCE = "announce"
 local MSG_COUNT = "count"
 local MSG_COUNT_ENABLED = "count-en"
 local MSG_COUNT_DISABLED = "count-de"
+local MSG_RENAME = "ren"
 local ADDON_PREFIX = "ZE2okI8Vx5H72L"
 local SCOPE = CHANNEL_GUILD
 local HOPPER_QUERY_TIMEOUT = 10
@@ -28,7 +30,8 @@ local HOP_INVITE_COOLDOWN = 600 -- wait 10 minutes before inviting someone again
 local IDENTICAL_PLAYERS_CHANGED = 0.1 -- allow 10% identical players (5/50)
 local LAYER_DETECTION_TIMEOUT = 90
 local LAYER_DETECTION_WHO = 10
-local MIN_WHO_COUNT = 20
+local MIN_WHO_COUNT = 10
+local WHO_LEVEL_RANGE = 10
 
 local gPlayerName = nil 
 local gRealmName = nil 
@@ -46,6 +49,7 @@ local gToPlayer = nil
 local gInLayerOf = nil
 
 local gLayerID = nil
+local gPreviousLayerID = nil 
 local gLayerDetectionStarted = nil
 local gLayerDetectionWho = nil
 local gSentWhoQuery = nil
@@ -104,6 +108,8 @@ function Hopper_OnLoad(self)
 	gFaction = UnitFactionGroup("player")
 	gPlayerName = UnitName("player")
 	gRealmPlayerName = getRealmName(gPlayerName)
+
+	gLayerID = gRealmPlayerName
 
 	if not INVITED then INVITED = {} end 
 
@@ -197,16 +203,15 @@ function Hopper_OnUpdate(self)
 			gLayerDetectionWho = nil 
 			gWhoResult = {}
 			debug("Layer detection timeout, stopping")
+			Hopper_OnLayerNotChanged()
 		else 
 			inCombat = UnitAffectingCombat("player")
 			if inCombat then 
 				gLayerDetectionStarted = t 
-				gLayerDetectionWho = t 
-			else
-				if t - gLayerDetectionWho > LAYER_DETECTION_WHO then 
-					gLayerDetectionWho = t
-					Hopper_SampleWho() 
-				end 
+			end 
+			if t - gLayerDetectionWho > LAYER_DETECTION_WHO then 
+				gLayerDetectionWho = t
+				Hopper_SampleWho() 
 			end 
 		end 
 	end 
@@ -251,13 +256,17 @@ function Hopper_HandleAddonMessage(text, channel, sender, target)
 	-- debug('CHAT_MSG_ADDON ('..sender..') '..text)
 	if message == MSG_COUNT then 
 		if parts[2] then 
-			local participant = {["Enabled"] = parts[2], ["Version"] = parts[3]}
+			local participant = {
+				Enabled = parts[2], 
+				Version = parts[3]
+			}
+			if parts[4] then participant.LayerID = parts[4] end 
 			-- count response
 			if gHoppers ~= nil then 
 				debug("Count - "..sender..", enabled: "..parts[2]..", version: "..parts[3])
 				gHoppers[sender] = participant
 			end 	
-			if gHopRequested and gChooseFromAnnounce and participant["Enabled"] == "true" then 
+			if gHopRequested and gChooseFromAnnounce and participant.Enabled == "true" then 
 				Hopper_HandleParticipantResponse(sender, participant)
 			end 
 		else 
@@ -266,6 +275,14 @@ function Hopper_HandleAddonMessage(text, channel, sender, target)
 			Hopper_SendInfo()
 		end 
 	end 
+
+	if message == MSG_RENAME then 
+		if gLayerID == parts[2] then 
+			debug("Renaming layer ID from "..parts[2].." --> "..parts[3])
+			gLayerID = parts[3]
+		end 
+	end 
+
 	if (message == MSG_INVITE or message == MSG_ANNOUNCE) and ENABLED then 
 		debug("Hop requested "..message.." from "..sender.." through "..channel)
 		local isLeader = partySize > 0 and UnitIsGroupLeader(gPlayerName)
@@ -288,7 +305,12 @@ function Hopper_HandleAddonMessage(text, channel, sender, target)
 end 
 
 function Hopper_SendInfo()
-	C_ChatInfo.SendAddonMessage(ADDON_PREFIX, MSG_COUNT..","..tostring(ENABLED)..","..VERSION, SCOPE)
+	C_ChatInfo.SendAddonMessage(ADDON_PREFIX, MSG_COUNT..","..tostring(ENABLED)..","..VERSION..","..gLayerID, SCOPE)
+end 
+
+function Hopper_RenameLayerID(fromID, toID)
+	debug("Sending rename layer ID from "..fromID.." --> "..toID)
+	C_ChatInfo.SendAddonMessage(ADDON_PREFIX, MSG_RENAME..","..fromID..","..toID, SCOPE)
 end 
 
 ------------------------------------------------------------------------------
@@ -297,7 +319,7 @@ end
 function Hopper_SampleWho() 
 	if not gWhoText then 
 		local playerLevel = UnitLevel("player")
-		gWhoText = 'z-"'..GetZoneText()..'" '..tostring(math.max(playerLevel-3, 1)).."-"..tostring(math.min(playerLevel+3, 60))
+		gWhoText = 'z-"'..GetZoneText()..'" '..tostring(math.max(playerLevel-WHO_LEVEL_RANGE, 1)).."-"..tostring(math.min(playerLevel+WHO_LEVEL_RANGE, 60))
 		-- if gFaction == "Horde" then whotext = 'z-"Orgrimmar"' else whotext = 'z-"Stormwind"' end 
 	end 
 
@@ -342,7 +364,7 @@ function Hopper_ProcessWhoResult(query, result, complete)
 			if gWhoResult[v.Name] then count = count + 1 end
 		end 
 		local commonPercent = count / gWhoResultSize
-		debug("Who common = "..tostring(math.floor(commonPercent * 100)).."% "..count.."/"..gWhoResultSize)
+		debug("Who common |cffffff00"..tostring(math.floor(commonPercent * 100)).."|cff999900%|cFF999999 "..count.."/"..gWhoResultSize)
 		if commonPercent <= IDENTICAL_PLAYERS_CHANGED then 
 			Hopper_OnLayerChange()
 		end 
@@ -351,7 +373,14 @@ end
 
 function Hopper_OnLayerChange() 
 	Hopper_StopLayerDetection()
-	print("|cffff2222 !! Layer changed !!")
+	print("|cff00ff00 !! Layer changed !!")
+end 
+
+function Hopper_OnLayerNotChanged()
+	if gPreviousLayerID then 
+		Hopper_RenameLayerID(gPreviousLayerID, gLayerID)
+	end 
+	print("|cffff0000 !! Layer not changed !!")
 end 
 
 function Hopper_StopLayerDetection()
@@ -384,8 +413,11 @@ function Hopper_RequestHop()
 			gHopRequestRetry = true 
 			return 
 		end 
-		Hopper_StartLayerChangeDetection()
-		-- Hopper_RequestHop_Send(false)
+		if CHECKWHO then 
+			Hopper_StartLayerChangeDetection()
+		else 
+			Hopper_RequestHop_Send(false)
+		end 
 	else 
 		printerr("Can't hop while in a party, leave it first.")
 	end 
@@ -414,16 +446,26 @@ function Hopper_RequestHop_Send(quiet)
 end 
 
 function Hopper_HandleParticipantResponse(sender, participant) 
-	gToPlayer = sender 
-	gChooseFromAnnounce = false 
-	Hopper_RequestHop_Send(true)
+	if not participant.LayerID or participant.LayerID ~= gLayerID then 
+		gPreviousLayerID = gLayerID
+		if participant.LayerID then 
+			gLayerID = participant.LayerID
+		else 
+			gLayerID = getRealmName(sender) 
+		end 
+		gToPlayer = sender 
+		gChooseFromAnnounce = false 
+		Hopper_RequestHop_Send(true)
+	end 
 end 
 
 function Hopper_RequestFromChannel() 
 	for i=1,15 do
 		local id, name = GetChannelName(i);
 		if name and string.lower(name) == string.lower(CHANNEL_NAME) then
+			debug("Requesting hop from channel...")
 			SendChatMessage(CHANNEL_MSG, "CHANNEL", nil, id);
+			return 
 		end
 	end	  
 end 
@@ -517,6 +559,9 @@ function Hopper_Main(msg)
 	elseif  "DEBUG" == cmd then
 		DEBUG = not DEBUG
 		print("Debug = "..tostring(DEBUG))
+	elseif  "WHO" == cmd then
+		CHECKWHO = not CHECKWHO
+		print("CHECKWHO = "..tostring(CHECKWHO))
 	elseif  "ANNOUNCE" == cmd then
 		ANNOUNCEMODE = not ANNOUNCEMODE
 		print("ANNOUNCEMODE = "..tostring(ANNOUNCEMODE))
