@@ -278,6 +278,7 @@ function Hopper_HandleAddonMessage(text, channel, sender, target)
 
 	if message == MSG_RENAME then 
 		if gLayerID == parts[2] then 
+			debug("Renaming layer ID from "..parts[2].." --> "..parts[3])
 			gLayerID = parts[3]
 		end 
 	end 
@@ -308,6 +309,7 @@ function Hopper_SendInfo()
 end 
 
 function Hopper_RenameLayerID(fromID, toID)
+	debug("Sending rename layer ID from "..fromID.." --> "..toID)
 	C_ChatInfo.SendAddonMessage(ADDON_PREFIX, MSG_RENAME..","..fromID..","..toID, SCOPE)
 end 
 
