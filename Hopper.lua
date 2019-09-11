@@ -28,7 +28,7 @@ local HOP_ACCEPT_TIMEOUT = 60
 local HOP_REQUEST_COOLDOWN = 10
 local HOP_INVITE_COOLDOWN = 600 -- wait 10 minutes before inviting someone again
 local IDENTICAL_PLAYERS_CHANGED = 0.1 -- allow 10% identical players (5/50)
-local LAYER_DETECTION_TIMEOUT = 90
+local LAYER_DETECTION_TIMEOUT = 25
 local LAYER_DETECTION_WHO = 10
 local MIN_WHO_COUNT = 10
 local WHO_LEVEL_RANGE = 10
@@ -258,12 +258,13 @@ function Hopper_HandleAddonMessage(text, channel, sender, target)
 		if parts[2] then 
 			local participant = {
 				Enabled = parts[2], 
-				Version = parts[3]
+				Version = parts[3],
+				LayerID = nil
 			}
 			if parts[4] then participant.LayerID = parts[4] end 
 			-- count response
 			if gHoppers ~= nil then 
-				debug("Count - "..sender..", enabled: "..parts[2]..", version: "..parts[3])
+				debug("Count - "..sender..", enabled: "..parts[2]..", version: "..parts[3]..", ID: "..emptyIfNil(participant.LayerID))
 				gHoppers[sender] = participant
 			end 	
 			if gHopRequested and gChooseFromAnnounce and participant.Enabled == "true" then 
