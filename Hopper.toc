@@ -5,12 +5,5 @@
 ## OptionalDeps: LibWho-2.0, LibStub, CallbackHandler-1.0
 ## SavedVariables: AUTO_LEAVE_DELAY, ANNOUNCEMODE, CHECKWHO
 ## SavedVariablesPerCharacter: ENABLED, PARTYADD, AUTOLEAVE, INVITED, DEBUG, CHANNEL_NAME, CHANNEL_MSG
-
-#@no-lib-strip@
-libs\LibStub\LibStub.lua
-libs\CallbackHandler-1.0\CallbackHandler-1.0.lua
-libs\LibWho-2.0\LibWho-2.0.lua
-#@end-no-lib-strip@
-
 Hopper.lua
 Hopper.xml
