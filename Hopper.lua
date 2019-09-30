@@ -10,7 +10,7 @@ CHECKWHO = true
 CHANNEL_NAME = "layer"
 CHANNEL_MSG = "layer"
 
-local VERSION = "1.3.0"
+local VERSION = "1.3.1"
 local CHANNEL_WHISPER = "WHISPER"
 local CHANNEL_GUILD = "GUILD"
 local MSG_INVITE = "inv"
@@ -211,7 +211,7 @@ function Hopper_OnUpdate(self)
 			end 
 			if t - gLayerDetectionWho > LAYER_DETECTION_WHO then 
 				gLayerDetectionWho = t
-				Hopper_SampleWho() 
+				-- Hopper_SampleWho() 
 			end 
 		end 
 	end 
@@ -317,32 +317,32 @@ end
 ------------------------------------------------------------------------------
 -- Layer detection
 
-function Hopper_SampleWho() 
-	if not gWhoText then 
-		local playerLevel = UnitLevel("player")
-		gWhoText = 'z-"'..GetZoneText()..'" '..tostring(math.max(playerLevel-WHO_LEVEL_RANGE, 1)).."-"..tostring(math.min(playerLevel+WHO_LEVEL_RANGE, 60))
-		-- if gFaction == "Horde" then whotext = 'z-"Orgrimmar"' else whotext = 'z-"Stormwind"' end 
-	end 
+-- function Hopper_SampleWho() 
+-- 	if not gWhoText then 
+-- 		local playerLevel = UnitLevel("player")
+-- 		gWhoText = 'z-"'..GetZoneText()..'" '..tostring(math.max(playerLevel-WHO_LEVEL_RANGE, 1)).."-"..tostring(math.min(playerLevel+WHO_LEVEL_RANGE, 60))
+-- 		-- if gFaction == "Horde" then whotext = 'z-"Orgrimmar"' else whotext = 'z-"Stormwind"' end 
+-- 	end 
 
-	wholib = wholib or LibStub:GetLibrary("LibWho-2.0", true)
-	gSentWhoQuery = time()
-	if wholib then
-		debug("Sending who query "..gWhoText)
-		wholib:Who(gWhoText, {
-			queue = wholib.WHOLIB_QUEUE_QUIET,
-			flags = 0,
-			callback = Hopper_ProcessWhoResult
-		})
-	else
-		printerr("No wholib detected")
-		-- SendWho(gWhoText)
-	end
-end 
+-- 	wholib = wholib or LibStub:GetLibrary("LibWho-2.0", true)
+-- 	gSentWhoQuery = time()
+-- 	if wholib then
+-- 		debug("Sending who query "..gWhoText)
+-- 		wholib:Who(gWhoText, {
+-- 			queue = wholib.WHOLIB_QUEUE_QUIET,
+-- 			flags = 0,
+-- 			callback = Hopper_ProcessWhoResult
+-- 		})
+-- 	else
+-- 		printerr("No wholib detected")
+-- 		-- SendWho(gWhoText)
+-- 	end
+-- end 
 
 function Hopper_StartLayerChangeDetection() 
 	gWhoResult = nil 
 	gWhoText = nil 
-	Hopper_SampleWho()
+	-- Hopper_SampleWho()
 	gLayerDetectionStarted = time()
 	gLayerDetectionWho = gLayerDetectionStarted
 end 
