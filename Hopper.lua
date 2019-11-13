@@ -62,7 +62,7 @@ local libWho = nil
 -- Utils
 
 local function print(text)
-    DEFAULT_CHAT_FRAME:AddMessage("|cFFFF8080Hopper |r".. text)
+    DEFAULT_CHAT_FRAME:AddMessage(" |cff8899ff<|cffbb99ffHopper|cff8899ff>|r ".. text)
 end 
 
 local function printerr(text)
